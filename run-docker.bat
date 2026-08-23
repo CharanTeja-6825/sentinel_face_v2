@@ -12,5 +12,10 @@ if not exist .env (
   echo Created .env from .env.example.
 )
 
-docker compose up --build %*
+echo Building Docker images...
+docker compose build
+if errorlevel 1 exit /b 1
+
+echo Starting SentinelFace...
+docker compose up %*
 exit /b %errorlevel%

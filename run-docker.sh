@@ -11,4 +11,8 @@ if [ ! -f .env ]; then
   echo "Created .env from .env.example."
 fi
 
-exec docker compose up --build "$@"
+echo "Building Docker images..."
+docker compose build
+
+echo "Starting SentinelFace..."
+exec docker compose up "$@"

@@ -44,7 +44,9 @@ run-docker.bat
 ```
 
 The launchers create `.env` from `.env.example` only when `.env` does not already
-exist, then run `docker compose up --build`.
+exist, build all Docker images, and then start the Compose services. Pass Compose
+run options to the launcher, for example `./run-docker.sh -d` or
+`run-docker.bat -d`.
 
 Open:
 
