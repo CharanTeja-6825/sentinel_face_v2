@@ -351,6 +351,60 @@ def test_sampling_uses_grab_for_skipped_frames(tmp_path, monkeypatch):
     assert calls["retrieve"] == len(frames)
 
 
+def test_4k_tiled_detection_uses_calibrated_detector_size():
+    """The worker must pass the calibrated SCRFD size to every 4K tile."""
+    assert tuple(settings.video.det_size) == (640, 640)
+    calls = []
+
+    class Engine:
+        det_size = (640, 640)
+
+        def detect_only(self, image, input_size=None):
+            calls.append(input_size)
+            return np.zeros((0, 5), np.float32), np.zeros((0, 5, 2), np.float32)
+
+    assert video_pipeline.detect_frame(Engine(), np.zeros((4000, 3000, 3), np.uint8)) == []
+    assert calls == [(640, 640)] * 4
+
+
+def test_two_quality_approved_crops_are_enough_for_short_track(monkeypatch):
+    """A brief distant appearance must not be dropped after two good frames."""
+    from types import SimpleNamespace
+
+    from app.services.quality import QualityResult
+    from app.utils.tracking import Crop
+
+    frame = np.full((120, 120, 3), 128, dtype=np.uint8)
+    track = SimpleNamespace(
+        first_seen_s=0.0,
+        last_seen_s=0.5,
+        crops=[
+            Crop(0.0, box(10, 10), np.zeros((5, 2), np.float32), 0.9),
+            Crop(0.5, box(10, 10), np.zeros((5, 2), np.float32), 0.9),
+        ],
+    )
+
+    monkeypatch.setattr(
+        video_pipeline.quality,
+        "assess",
+        lambda face, image: QualityResult(True, quality_score=0.8),
+    )
+
+    class Engine:
+        def align(self, image, kps):
+            return np.zeros((112, 112, 3), dtype=np.uint8)
+
+        def embed_aligned(self, crops):
+            return np.tile(np.eye(512, dtype=np.float32)[0], (len(crops), 1))
+
+    summary = video_pipeline.summarise_track(
+        Engine(), track, 0, {0.0: frame, 0.5: frame}
+    )
+    assert summary is not None
+    assert summary.crop_count == 2
+    assert settings.video.track_min_hits == 2
+
+
 def test_corrupt_video_raises_a_readable_error(tmp_path):
     """§8.8 — a deliberately corrupt video must fail with a readable message."""
     path = tmp_path / "broken.mp4"

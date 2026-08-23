@@ -147,7 +147,7 @@ def detect_frame(engine: FaceEngine, frame: np.ndarray) -> list[Detection]:
         for oy in (0, height - tile_h):
             for ox in (0, width - tile_w):
                 tile = frame[oy : oy + tile_h, ox : ox + tile_w]
-                boxes, kps = engine.detect_only(tile)
+                boxes, kps = engine.detect_only(tile, input_size=engine.det_size)
                 if len(boxes):
                     boxes = boxes.copy()
                     boxes[:, [0, 2]] += ox
@@ -163,7 +163,7 @@ def detect_frame(engine: FaceEngine, frame: np.ndarray) -> list[Detection]:
             return []
         boxes, kps = _nms(np.vstack(boxes_all), np.vstack(kps_all))
     else:
-        boxes, kps = engine.detect_only(frame)
+        boxes, kps = engine.detect_only(frame, input_size=engine.det_size)
 
     return [
         Detection(bbox=b[:4].astype(np.float32), kps=k, det_score=float(b[4]))

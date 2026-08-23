@@ -247,7 +247,7 @@ def assess(face, frame: np.ndarray, cfg: QualityConfig | None = None) -> Quality
 #
 # Everything above this line is unchanged and still serves Module B. `assess()` is
 # called by the video pipeline through a duck-typed `_CropFace` adapter, and
-# `min_crops_per_track: 3` means a small tightening there silently zeroes whole tracks
+# `min_crops_per_track` means a small tightening there silently zeroes whole tracks
 # — the D9 incident. So this is a parallel gate, not a rewrite of that one.
 #
 # `blur_variance()` (D9) and `weighted_score()` (D4) are reused as they are: they take

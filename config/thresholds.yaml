@@ -62,14 +62,21 @@ video:
   sample_fps: 2.0                 # frames per second to analyse
   max_duration_minutes: 60
   max_upload_mb: 2048
-  det_size: [1024, 1024]          # SCRFD input; raise for 4K sources
+  # SCRFD is applied to overlapping 4K tiles in `video_pipeline.detect_frame`.
+  # On the portrait 4K uploads, 1024x1024 caused the detector to miss faces
+  # that were found reliably at 640x640; the tile itself preserves the
+  # effective face scale, so the smaller input is the calibrated choice.
+  det_size: [640, 640]
   track_iou_threshold: 0.30
   track_max_age_frames: 15        # frames a track survives without detection
-  track_min_hits: 3               # detections before a track is confirmed
+  track_min_hits: 2               # detections before a track is confirmed
 
 matching:
   cluster_distance: 0.50          # agglomerative cosine distance
-  min_crops_per_track: 3
+  # Two quality-approved samples are sufficient after track confirmation. This
+  # preserves short or distant appearances where pose/occlusion rejects the
+  # other sampled frames, while still requiring temporal evidence.
+  min_crops_per_track: 2
   t_high: 0.60                    # auto-present
   t_low: 0.45                     # below this, no match
   margin_min: 0.10                # top1 - top2 required for confidence
