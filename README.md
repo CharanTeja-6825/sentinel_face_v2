@@ -44,9 +44,11 @@ run-docker.bat
 ```
 
 The launchers create `.env` from `.env.example` only when `.env` does not already
-exist, build all Docker images, and then start the Compose services. Pass Compose
-run options to the launcher, for example `./run-docker.sh -d` or
-`run-docker.bat -d`.
+exist, detect the host architecture (`amd64` or `arm64`), set Docker's platform,
+build the local `backend` and `worker` images for that platform, and then start
+Compose. Compose pulls the prebuilt `db`, `redis`, and `frontend` images for that
+platform during startup. Pass Compose run options to the launcher, for example
+`./run-docker.sh -d` or `run-docker.bat -d`.
 
 Open:
 
