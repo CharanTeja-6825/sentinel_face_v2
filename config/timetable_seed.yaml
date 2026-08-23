@@ -1,0 +1,43 @@
+# Transcribed from the supplied timetable image — INIT.md §5.3.
+#
+# Entry format in the source:
+#   23IE4053A-S  -  S-67  -  RoomNo-R407A
+#   └─ course ─┘    └sec┘     └── room ──┘
+#            └ component: L=lecture, P=practical, S=skill/lab
+#
+# Contiguous periods sharing (course, component, group, room) merge into ONE
+# session block. Room is part of the key — see the Wednesday case below, where
+# periods 3-4 and 5-6 are the same course and group in DIFFERENT rooms and must
+# stay two blocks.
+#
+# Periods 10, 11, 13, 14, 15 are empty in the source. Periods 12 and 16 fall
+# outside attendance_eligible_periods — they are still loaded, they simply
+# cannot have attendance sessions created against them.
+#
+# Expected result: 18 blocks (Mon 3, Tue 4, Wed 4, Thu 3, Fri 2, Sat 2).
+
+section: S-67
+entries:
+  - { day: Mon, periods: [3,4,5,6], course: "23IE4053A", component: S, group: "S-67", room: "R407A" }
+  - { day: Mon, periods: [12],      course: "23AVI3405", component: L, group: "S-62", room: "M123"  }
+  - { day: Mon, periods: [16],      course: "23IE4053A", component: P, group: "S-74", room: "A307"  }
+
+  - { day: Tue, periods: [3,4],     course: "22PH4102",  component: L, group: "S-57", room: "C623"  }
+  - { day: Tue, periods: [5,6],     course: "22PH4102",  component: P, group: "S-57", room: "F201"  }
+  - { day: Tue, periods: [7],       course: "22PH4102",  component: L, group: "S-57", room: "C624B" }
+  - { day: Tue, periods: [16],      course: "23IE4053A", component: P, group: "S-74", room: "A307"  }
+
+  - { day: Wed, periods: [1,2],     course: "OECE0003",  component: L, group: "S-51", room: "L306"  }
+  - { day: Wed, periods: [3,4],     course: "23IE4053A", component: S, group: "S-67", room: "R405B" }
+  - { day: Wed, periods: [5,6],     course: "23IE4053A", component: S, group: "S-67", room: "R407A" }
+  - { day: Wed, periods: [8,9],     course: "23AVI3509", component: L, group: "S-79", room: "M201"  }
+
+  - { day: Thu, periods: [1,2],     course: "OEBB0002",  component: L, group: "S-58", room: "C421A" }
+  - { day: Thu, periods: [3,4,5,6], course: "23IE4053A", component: S, group: "S-67", room: "R407B" }
+  - { day: Thu, periods: [8],       course: "23AVI3509", component: L, group: "S-79", room: "L502"  }
+
+  - { day: Fri, periods: [3,4],     course: "OEVC0003",  component: L, group: "S-60", room: "R404A" }
+  - { day: Fri, periods: [7],       course: "OEVC0003",  component: L, group: "S-60", room: "C221B2"}
+
+  - { day: Sat, periods: [1],       course: "OECE0003",  component: L, group: "S-51", room: "C608"  }
+  - { day: Sat, periods: [2],       course: "OEBB0002",  component: L, group: "S-58", room: "C608"  }

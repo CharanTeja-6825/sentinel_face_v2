@@ -1,0 +1,75 @@
+# SentinelFace thresholds — INIT.md §5.1
+#
+# Every one of these is a STARTING VALUE requiring calibration against real
+# data. None are correct until measured. See INIT.md §12 Phase 6.
+# Nothing in the code may hardcode any of these — read them from app.config.
+
+quality:
+  min_det_score: 0.60
+  min_face_width_px: 60           # in source frame, pre-resize. On the MediaPipe path
+                                  # this is measured as the landmark x-span, which is
+                                  # 0.97-1.01x the SCRFD box width on real frames, so
+                                  # one number still means the same thing on both paths.
+  min_blur_variance: 40.0         # variance of Laplacian, at 112x112 (D9)
+
+  # Ratio gates — the 5-keypoint estimator. The VIDEO path still reads these, and
+  # test_pose.py pins them. Do not retune them for enrolment; use the degrees below.
+  max_yaw_ratio: 0.35             # 5-point landmark proxy, ~40 degrees
+  max_pitch_ratio: 0.40
+
+  min_brightness: 40
+  max_brightness: 215
+
+  # Degree gates — MediaPipe 3D pose, ENROLMENT path only (D12). Positive yaw = the
+  # subject turned to their own left; positive pitch = looking down. Same convention as
+  # the ratio estimator, verified by mirroring rather than assumed.
+  max_yaw_deg: 45.0               # beyond this an enrolment frame is refused outright
+  max_pitch_deg: 35.0
+  max_roll_deg: 20.0              # newly measurable; a rolled head aligns badly
+  angle_yaw_deg: 15.0             # bucket boundary: |yaw| >= this -> left / right
+  angle_pitch_deg: 12.0           # bucket boundary: |pitch| >= this -> down / up
+  max_eye_blink: 0.55             # blendshape eyeBlink ceiling; above it the frame
+                                  # caught a blink and must not become a template
+
+preprocess:
+  # D13 — applied to the detection/landmark copy ONLY. What ArcFace embeds is always the
+  # original pixels, so retuning anything here cannot invalidate the stored gallery.
+  enabled: true
+  max_side: 640                   # BlazeFace consumes 128x128 and the mesh 256x256, so
+                                  # enhancing at full webcam resolution buys nothing and
+                                  # does not fit the wizard's 700 ms probe budget
+  bilateral_d: 5                  # small d — this runs on every probe
+  bilateral_sigma: 50.0
+  gamma_target_luma: 0.45         # mean luminance the adaptive gamma aims for
+  clahe_clip: 2.0
+  clahe_grid: 8
+
+enrolment:
+  # Guided capture: one angle at a time, in required_angles order. The backend
+  # only banks a frame whose detected pose matches the CURRENT target angle,
+  # so these numbers describe depth per orientation, not a total to race to.
+  min_samples: 15
+  max_samples: 40
+  required_angles: [front, left, right, up, down]
+  min_samples_per_angle: 3        # 3 x 5 angles = min_samples exactly
+  min_quality_score: 0.50         # enrolment-only floor on weighted_score();
+                                  # THE calibration knob — raise for stricter
+                                  # vectors, lower if good webcams get stuck
+  diversity_max_cosine: 0.95      # reject frames too similar to existing
+  session_timeout_minutes: 15
+
+video:
+  sample_fps: 2.0                 # frames per second to analyse
+  max_duration_minutes: 60
+  max_upload_mb: 2048
+  det_size: [1024, 1024]          # SCRFD input; raise for 4K sources
+  track_iou_threshold: 0.30
+  track_max_age_frames: 15        # frames a track survives without detection
+  track_min_hits: 3               # detections before a track is confirmed
+
+matching:
+  cluster_distance: 0.50          # agglomerative cosine distance
+  min_crops_per_track: 3
+  t_high: 0.60                    # auto-present
+  t_low: 0.45                     # below this, no match
+  margin_min: 0.10                # top1 - top2 required for confidence

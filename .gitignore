@@ -1,0 +1,4 @@
+./storage
+./frontend/node_modules
+./backend/core
+**/__pycache__/

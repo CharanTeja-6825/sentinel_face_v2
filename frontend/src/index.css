@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens.
+ *
+ * These are bare HSL triplets, not full colour functions, because tailwind.config.js
+ * wraps every one of them as `hsl(var(--token))`. The file previously held oklch()
+ * values against that same config, which compiled to `hsl(oklch(1 0 0))` — invalid CSS
+ * that browsers drop, so the entire palette was inert and every screen rendered on
+ * user-agent defaults. Keep the two halves in the same colour space.
+ *
+ * Palette: slate-based, high contrast, one accent.
+ */
+@layer base {
+  :root {
+    --background: 210 40% 98%;              /* #F8FAFC page */
+    --foreground: 215 25% 27%;              /* #334155 body text */
+
+    --card: 0 0% 100%;                      /* #FFFFFF surface */
+    --card-foreground: 222 47% 11%;         /* #0F172A headings on surface */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 222 47% 11%;                 /* #0F172A */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;        /* #64748B */
+
+    --accent: 221 83% 53%;                  /* #2563EB */
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 214 100% 97%;           /* #EFF6FF accent wash */
+
+    --success: 142 71% 36%;                 /* #16A34A */
+    --success-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;               /* #DC2626 */
+    --destructive-foreground: 0 0% 100%;
+    --warning: 32 95% 44%;                  /* #D97706 */
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;                  /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;                    /* focus ring is the accent */
+
+    --radius: 0.625rem;
+  }
+}
+
+/*
+ * No `.dark` block. `darkMode: ["class"]` is configured but nothing in the app ever
+ * adds the class, so the previous dark palette was unreachable code — and it was a
+ * stale zinc set, not a considered inversion of this one. Add a real second palette
+ * when a toggle is actually wanted.
+ */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4 {
+    @apply text-card-foreground font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Numeric readouts that update in place must not reflow as digits change. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}

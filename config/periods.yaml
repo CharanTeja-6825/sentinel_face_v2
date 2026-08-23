@@ -1,0 +1,40 @@
+# ============================================================================
+# PLACEHOLDER — NOT VERIFIED. INIT.md §5.2.
+#
+# The supplied timetable shows period NUMBERS 1..16 and contains no clock
+# times. The times below are a guess and are almost certainly wrong for your
+# institution. A human must confirm them with the university.
+#
+# Consequence of leaving them wrong: block_time_window() returns wrong wall
+# clock times in the UI and API. It does NOT affect face recognition, roster
+# scoping, or attendance correctness — those key off period NUMBERS only.
+#
+# When verified: set `verified: true` below to silence the startup warning.
+# ============================================================================
+verified: false
+
+timezone: "Asia/Kolkata"
+period_duration_minutes: 50
+
+periods:
+  1:  { start: "08:00", end: "08:50" }
+  2:  { start: "08:50", end: "09:40" }
+  3:  { start: "09:40", end: "10:30" }
+  4:  { start: "10:30", end: "11:20" }
+  5:  { start: "11:20", end: "12:10" }
+  # lunch 12:10 - 13:00
+  6:  { start: "13:00", end: "13:50" }
+  7:  { start: "13:50", end: "14:40" }
+  8:  { start: "14:40", end: "15:30" }
+  9:  { start: "15:30", end: "16:20" }
+  10: { start: "16:20", end: "17:10" }
+  11: { start: "17:10", end: "18:00" }
+  12: { start: "18:00", end: "18:50" }
+  13: { start: "18:50", end: "19:40" }
+  14: { start: "19:40", end: "20:30" }
+  15: { start: "20:30", end: "21:20" }
+  16: { start: "21:20", end: "22:10" }
+
+# Periods eligible for attendance recording.
+# Per institutional rule, classes in later periods are not counted.
+attendance_eligible_periods: [1, 2, 3, 4, 5, 6, 7, 8, 9]

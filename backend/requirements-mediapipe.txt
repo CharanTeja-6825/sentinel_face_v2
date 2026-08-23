@@ -1,0 +1,20 @@
+# MediaPipe owns detection, landmarks and pose on the ENROLMENT path (D12).
+#
+# Installed with --no-deps, deliberately. MediaPipe declares `opencv-contrib-python`,
+# which collides with the `opencv-python-headless` in requirements.txt — two distributions
+# both providing `cv2`, and the contrib build needs libGL, which python:3.11-slim does not
+# have. It also declares jax, jaxlib, matplotlib and sentencepiece, none of which a
+# headless face pipeline imports. The five packages below are what
+# `mediapipe.tasks.python.vision` actually pulls in at runtime, verified by import.
+#
+# 0.10.18, not the newer 0.10.21 the docs describe: PyPI publishes no aarch64 wheel for
+# 0.10.21 and this image is built for arm64. 0.10.18 declares numpy<2, so the numpy==1.26.4
+# pin that insightface 0.7.3 requires (§14.3) still holds — no conflict.
+
+mediapipe==0.10.18
+
+absl-py==2.1.0
+attrs==24.2.0
+flatbuffers==24.3.25
+protobuf==4.25.5
+sounddevice==0.5.1
