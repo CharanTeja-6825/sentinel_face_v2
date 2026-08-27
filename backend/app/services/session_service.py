@@ -7,7 +7,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 import redis
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from rq import Queue
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -114,9 +114,21 @@ def create_session(db: Session, block_id: uuid.UUID, session_date: date) -> dict
 # ─────────────────────────── video upload ──────────────────────────────
 
 
-def attach_video(
-    db: Session, session_id: uuid.UUID, filename: str, data: bytes
+# 1 MiB per read. Large enough that the syscall overhead is irrelevant on a 2 GB
+# upload, small enough that peak residency is noise.
+UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+
+async def attach_video(
+    db: Session, session_id: uuid.UUID, filename: str, upload: UploadFile
 ) -> dict:
+    """Stream an upload to disk and queue it — §8.7.
+
+    The size limit is enforced DURING the copy, not after it. Checking `len(data)`
+    afterwards required the whole file in memory to have a length at all, which is
+    what the limit was supposed to prevent: a 2 GB upload cost 2 GB of API process
+    before it could be rejected for being 2 GB.
+    """
     session = db.get(AttendanceSession, session_id)
     if session is None:
         raise HTTPException(404, "Session not found")
@@ -124,15 +136,27 @@ def attach_video(
         raise HTTPException(409, "This session is finalized and cannot be re-run")
 
     cfg = settings.video
-    size_mb = len(data) / (1024 * 1024)
-    if size_mb > cfg.max_upload_mb:
-        raise HTTPException(
-            413, f"Video is {size_mb:.0f} MB; the limit is {cfg.max_upload_mb} MB"
-        )
+    max_bytes = cfg.max_upload_mb * 1024 * 1024
 
     suffix = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ".mp4"
     path = storage.video_path(session_id, suffix)
-    path.write_bytes(data)
+
+    written = 0
+    try:
+        with path.open("wb") as fh:
+            while chunk := await upload.read(UPLOAD_CHUNK_BYTES):
+                written += len(chunk)
+                if written > max_bytes:
+                    # Stop reading immediately; do not drain the rest of the body
+                    # just to report a number we already know is over the limit.
+                    raise HTTPException(
+                        413,
+                        f"Video exceeds the {cfg.max_upload_mb} MB limit",
+                    )
+                fh.write(chunk)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
 
     # Duration is checked after writing because it needs a decodable file.
     from app.workers.video_pipeline import video_duration_s

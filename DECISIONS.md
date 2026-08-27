@@ -135,3 +135,95 @@ Measured at this scale it separates cleanly: real frames 266–841, visibly soft
 **Phase 5, same footage.** The 4K tiling path (§8.3, §14.4) was gated on `width >= 3000`. Phone
 video shot upright arrives as 2160x3840, so a genuine 4K source skipped tiling purely because it was
 held in portrait. The constant is now `TILING_MIN_DIM` and tests `max(width, height)`.
+
+## D12 — MediaPipe drives the enrolment front-end; ArcFace still decides identity
+
+**Phase 6.** The enrolment wizard needed things SCRFD's five keypoints cannot supply: real
+degree-valued head pose for the guided angle prompts, eye state to catch a blink, and enough
+landmarks to draw a live overlay. MediaPipe Face Landmarker gives all three — 478 landmarks, 52
+blendshapes and a 4x4 facial transform matrix.
+
+What MediaPipe replaced is **detection and landmarking on the enrolment path only**. It does not
+touch identity: the 5 points ArcFace aligns from are still 5 points (`KPS_IDX = (468, 473, 1, 61,
+291)` — iris centres, nose tip, mouth corners), still fed to the same `norm_crop` similarity
+transform, still embedded by the same glintr100. `FaceEngine.MODEL_VERSION` is therefore deliberately
+**unchanged** — the embedding space did not move, so the stored gallery stays valid.
+
+That claim is measured, not asserted. `scripts/verify_alignment_parity.py` embeds the same frame
+twice, once aligned from SCRFD keypoints and once from MediaPipe's, and requires cosine > 0.95;
+observed range is 0.96–0.98. A new `landmark_source` column records which produced each template.
+
+**The video path does not load MediaPipe and should not.** The RQ worker runs a face mesh per face
+per frame for pose we already estimate adequately from SCRFD keypoints, at the cost of a second
+model in memory and a second inference lock. Spec §5 says reuse the existing detector when it is
+adequate; here it is.
+
+## D13 — Preprocessing enhances the copy that gets DETECTED, never the pixels that get EMBEDDED
+
+**Phase 6.** Poor lighting made MediaPipe fail to find or land a face at all, so
+`preprocess.enhance()` (bilateral denoise -> adaptive gamma -> CLAHE on the L channel) was added.
+It runs on a downscaled copy that feeds detection, landmarking and nothing else.
+
+**ArcFace always embeds the original pixels.** Two reasons, both load-bearing:
+
+* ArcFace was trained on largely un-enhanced faces. Enhancing what it embeds shifts the embedding
+  distribution away from the thresholds the video path is calibrated against (`t_high` 0.60,
+  `t_low` 0.45, `cluster_distance` 0.50).
+* Every stored template would otherwise depend on the preprocessing parameters. Retuning
+  `clahe_clip` would silently invalidate the entire gallery, with nothing raising.
+
+The quality gate also reads the **raw** frame, for the same reason in miniature: blur measured after
+a bilateral filter reads sharper than the truth, and brightness measured after adaptive gamma reads
+in-range by construction. Preprocessing earns its place upstream of the gate, not as a way past it.
+
+This is what spec §11 asks for — "live recognition preprocessing MUST remain compatible with
+registration preprocessing" — and it is why the video path must **not** grow a CLAHE stage of its
+own. Both paths do exactly `align(raw_frame, kps5)` -> `embed_aligned([crop])`, and that identity is
+the parity guarantee.
+
+## D14 — A track keeps its best few looks, not every frame it appeared in
+
+**Phase 7, the pipeline enhancement.** `run_pipeline` held every sampled frame in a dict for the
+duration of the video, because the quality gate and alignment ran *after* the frame loop and needed
+the pixels back. At the configured ceilings — `max_duration_minutes: 60`, `sample_fps: 2.0`, a 4K
+source — that is ~7,200 full-resolution frames, roughly **180 GB resident**. `max_duration_minutes`
+did nothing to prevent it, and the failure mode is an OOM kill partway through a class, not a
+readable error.
+
+The gate now runs inside the frame loop against the frame in hand, and each track retains only the
+aligned 112x112 crops of its best `observation.max_per_track` looks (default 8, ~300 KB per track).
+Memory is a function of how many people are in the room, not how long the video is. The same
+restructuring is what spec §7 (a normalised observation object), §9 (bad observation -> track only)
+and §10 (a bounded, quality-ranked per-track buffer) ask for — one change, three requirements.
+
+`Detection` already carried `.bbox`, `.kps` and `.det_score`, which is exactly what `quality.assess()`
+duck-types on, so the `_CropFace` adapter was deleted rather than rewritten.
+
+**This changes one behaviour, and it is the only one.** A track's mean embedding was the mean of
+*every* accepted crop; it is now the mean of the best K. Spec §10 and §29.5 both want that — weak
+observations should not dilute a track's identity — but "should be better" is not a measurement, so
+`scripts/diagnose_video.py` reports cosine(all-crops mean, best-K mean) per track. Measured on three
+tracks where the cap actually evicted something (23→8, 18→8, 12→8): **0.9978 – 0.9986**. The best 8
+looks carry essentially all of what the full set carried. Raise `max_per_track` if that ever drops
+below ~0.98 on real footage.
+
+Two things deliberately did **not** change with it:
+
+* Rejected observations still maintain their track. A face too small or too blurry to recognise now
+  is often sharp and close 300 ms later, and that only helps if the track survived the bad stretch.
+  Quality decides whether to RECOGNISE, never whether to TRACK.
+* Aggregation is still an unweighted mean over the survivors. Quality-*weighted* aggregation is spec
+  §15 and waits for Phase 4, because there is no labelled classroom footage to verify a weighting
+  against and inventing one blind is how §24's warning gets ignored.
+
+The per-track diagnostics earned their keep on the first run. The smoke video reported 2 of 6
+students present, which previously looked like an accuracy question with nowhere to start. The report
+answers it in one line: four of the six tracks retained **zero** crops, each with all 23 observations
+rejected `extreme_pose`. That is the ratio-based pose gate against a photo of people looking sideways
+— a known limitation of the 5-keypoint estimator, not a matching problem — and no amount of retuning
+`t_low` would have touched it. Before this phase that distinction was invisible.
+
+New quality knobs went into their own `observation:` block rather than into `quality:`, which is
+read by both the video gate and the enrolment gate. D9 is the record of what a shared-threshold
+change does when it goes wrong; the separation makes that class of mistake structurally impossible
+here.

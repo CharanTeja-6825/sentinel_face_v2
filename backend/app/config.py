@@ -76,6 +76,22 @@ class VideoConfig(BaseModel):
     track_min_hits: int
 
 
+class ObservationConfig(BaseModel):
+    """Video-path observation and quality-band knobs (spec §7-§10, §19).
+
+    Separate from QualityConfig on purpose. `quality:` is read by BOTH the video gate
+    and the enrolment gate, and D9 records the incident where tightening a shared
+    number silently zeroed whole tracks. Nothing in this class is reachable from the
+    enrolment path, so a retune here cannot repeat that.
+    """
+
+    max_per_track: int
+    band_medium_px: int
+    band_high_px: int
+    max_luma_asymmetry: float
+    max_clipped_fraction: float
+
+
 class MatchingConfig(BaseModel):
     cluster_distance: float
     min_crops_per_track: int
@@ -89,6 +105,7 @@ class Thresholds(BaseModel):
     preprocess: PreprocessConfig
     enrolment: EnrolmentConfig
     video: VideoConfig
+    observation: ObservationConfig
     matching: MatchingConfig
 
 
@@ -191,6 +208,10 @@ class Settings(BaseSettings):
     @property
     def video(self) -> VideoConfig:
         return self.thresholds.video
+
+    @property
+    def observation(self) -> ObservationConfig:
+        return self.thresholds.observation
 
     @property
     def matching(self) -> MatchingConfig:

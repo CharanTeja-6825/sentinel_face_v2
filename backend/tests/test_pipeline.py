@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -120,6 +121,180 @@ def test_timestamps_are_recorded_on_the_track():
         t.update([det(100, 100)], timestamp_s=i * 2.0)
     track = t.finish()[0]
     assert track.first_seen_s == 0.0 and track.last_seen_s == 8.0
+
+
+# ──────── observations, bands and bounded memory (spec §7-§10, §29.8) ────────
+
+
+def _obs(quality_score: float, timestamp_s: float = 0.0):
+    from app.services.quality import QualityResult
+    from app.utils.tracking import FaceObservation
+
+    return FaceObservation(
+        timestamp_s=timestamp_s,
+        quality=QualityResult(True, quality_score=quality_score),
+        aligned=np.zeros((112, 112, 3), np.uint8),
+    )
+
+
+def test_best_observation_buffer_keeps_the_top_k():
+    """Spec §10 — retain the strongest observations, bounded, in quality order."""
+    from app.utils.tracking import Track
+
+    k = 5
+    track = Track(id=0, bbox=box(0, 0))
+    # Offered in an order that is neither ascending nor descending, so passing by
+    # accident is not possible.
+    scores = [0.31, 0.94, 0.12, 0.77, 0.55, 0.88, 0.03, 0.62, 0.41, 0.99]
+    for score in scores:
+        track.offer(score, _obs(score), k)
+
+    kept = [o.quality.quality_score for o in track.observations()]
+    assert len(kept) == k
+    assert kept == sorted(scores, reverse=True)[:k]
+    assert kept == sorted(kept, reverse=True)      # observations() is best-first
+
+
+def test_buffer_declines_before_paying_for_alignment():
+    """`would_accept` is what saves the warpAffine — it must actually say no."""
+    from app.utils.tracking import Track
+
+    k = 3
+    track = Track(id=0, bbox=box(0, 0))
+    for score in (0.9, 0.8, 0.7):
+        assert track.would_accept(score, k)        # room while the heap is filling
+        track.offer(score, _obs(score), k)
+
+    assert not track.would_accept(0.5, k)          # worse than the weakest incumbent
+    assert not track.would_accept(0.7, k)          # a tie is not an improvement
+    assert track.would_accept(0.75, k)             # strictly better gets in
+
+
+def test_identical_scores_do_not_raise_on_the_heap():
+    """The sequence tiebreaker is load-bearing.
+
+    heapq compares tuples element by element. Without a unique second element, two
+    equal scores fall through to comparing the numpy array inside the observation,
+    which raises "truth value of an array is ambiguous". This is the regression
+    guard for that.
+    """
+    from app.utils.tracking import Track
+
+    track = Track(id=0, bbox=box(0, 0))
+    for _ in range(10):
+        track.offer(0.5, _obs(0.5), 4)             # all identical, deliberately
+    assert len(track.observations()) == 4
+
+
+def test_resolution_band_boundaries():
+    """Spec §8, §19 — and the guarantee that bands reject nothing new.
+
+    The UNUSABLE/LOW boundary must be exactly quality.min_face_width_px, the width
+    `assess()` already rejects at. If these two ever drift apart, a face can be
+    called LOW by one and face_too_small by the other.
+    """
+    from app.services import quality
+
+    qcfg = settings.quality
+    ocfg = settings.observation
+
+    assert quality.resolution_band(qcfg.min_face_width_px - 1) == quality.BAND_UNUSABLE
+    assert quality.resolution_band(qcfg.min_face_width_px) == quality.BAND_LOW
+    assert quality.resolution_band(ocfg.band_medium_px - 1) == quality.BAND_LOW
+    assert quality.resolution_band(ocfg.band_medium_px) == quality.BAND_MEDIUM
+    assert quality.resolution_band(ocfg.band_high_px - 1) == quality.BAND_MEDIUM
+    assert quality.resolution_band(ocfg.band_high_px) == quality.BAND_HIGH
+    assert quality.resolution_band(10_000) == quality.BAND_HIGH
+
+
+def test_illumination_metrics_catch_what_a_mean_hides():
+    """Spec §8 — backlit, uneven and blown frames whose mean is perfectly fine."""
+    from app.services.quality import illumination_metrics
+
+    even = np.full((64, 64), 128, np.uint8)
+    asym, clipped = illumination_metrics(even)
+    assert asym < 0.01 and clipped == 0.0
+
+    # Half in shadow. Mean is ~128 — the existing brightness gate sees nothing.
+    half_dark = np.full((64, 64), 200, np.uint8)
+    half_dark[:, :32] = 56
+    assert abs(float(half_dark.mean()) - 128) < 1
+    asym, _ = illumination_metrics(half_dark)
+    assert asym > 0.5
+
+    # Vertical split must be caught too, not just left/right.
+    top_dark = np.full((64, 64), 200, np.uint8)
+    top_dark[:32, :] = 56
+    assert illumination_metrics(top_dark)[0] > 0.5
+
+    # A "correct" mean built entirely from crushed blacks and blown highlights.
+    polarised = np.zeros((64, 64), np.uint8)
+    polarised[:, :32] = 255
+    assert illumination_metrics(polarised)[1] == 1.0
+
+    assert illumination_metrics(np.zeros((0, 0), np.uint8)) == (0.0, 0.0)
+
+
+def test_pipeline_does_not_retain_frames(monkeypatch):
+    """§29.8 — the regression guard for the 180 GB defect.
+
+    `run_pipeline` used to keep every sampled frame in a dict so the quality gate
+    could re-read the pixels afterwards. Peak memory therefore scaled with video
+    LENGTH: 60 min of 4K at 2 fps is ~7,200 frames, roughly 180 GB.
+
+    Asserted by weak reference rather than by measuring bytes. "No frame outlives
+    its iteration" is the actual invariant, and a weakref answers it exactly — a
+    memory-size threshold would only answer it approximately, and would need a
+    magic number chosen loose enough to flake in the other direction.
+    """
+    import gc
+    import weakref
+
+    frame_refs: list[weakref.ref] = []
+
+    def fake_sample_frames(video_path, sample_fps):
+        for i in range(300):
+            frame = np.zeros((240, 320, 3), np.uint8)
+            frame_refs.append(weakref.ref(frame))
+            yield i * 0.5, frame
+
+    # No faces: what is under test is whether the decoded frames are let go, not
+    # what is done with the faces in them.
+    monkeypatch.setattr(video_pipeline, "sample_frames", fake_sample_frames)
+    monkeypatch.setattr(video_pipeline, "detect_frame", lambda engine, frame: [])
+    monkeypatch.setattr(video_pipeline, "load_engine", lambda det_size: object())
+
+    class _NoopDb:
+        def commit(self):
+            pass
+
+    session = SimpleNamespace(video_path="unused.mp4", frames_sampled=0)
+    result = video_pipeline.run_pipeline(session, _NoopDb(), progress_every=25)
+
+    gc.collect()
+    alive = [r for r in frame_refs if r() is not None]
+
+    assert result.frames_sampled == 300
+    assert len(frame_refs) == 300
+    assert alive == [], (
+        f"{len(alive)} of 300 decoded frames are still reachable after "
+        "run_pipeline returned — the pipeline is retaining frames again"
+    )
+
+
+def test_track_memory_is_bounded_by_config_not_video_length():
+    """The other half of §29.8: a long track must not grow without limit."""
+    from app.utils.tracking import Track
+
+    k = settings.observation.max_per_track
+    track = Track(id=0, bbox=box(0, 0))
+    for i in range(2000):                          # ~17 minutes of presence at 2 fps
+        score = (i % 97) / 97.0                    # varied, so eviction really runs
+        if track.would_accept(score, k):
+            track.offer(score, _obs(score), k)
+
+    assert len(track.best) == k
+    assert len(track.observations()) == k
 
 
 # ───────────────────────── clustering (§8.2, §14.5) ────────────────────
@@ -368,21 +543,16 @@ def test_4k_tiled_detection_uses_calibrated_detector_size():
 
 
 def test_two_quality_approved_crops_are_enough_for_short_track(monkeypatch):
-    """A brief distant appearance must not be dropped after two good frames."""
-    from types import SimpleNamespace
+    """A brief distant appearance must not be dropped after two good frames.
 
+    Rewritten for the in-loop gate: it now drives `observe()` with the frame in
+    hand, the way `run_pipeline` does, instead of handing `summarise_track` a dict
+    of retained frames. That exercises association -> gate -> buffer -> summary as
+    one path, which is what actually has to hold.
+    """
     from app.services.quality import QualityResult
-    from app.utils.tracking import Crop
 
     frame = np.full((120, 120, 3), 128, dtype=np.uint8)
-    track = SimpleNamespace(
-        first_seen_s=0.0,
-        last_seen_s=0.5,
-        crops=[
-            Crop(0.0, box(10, 10), np.zeros((5, 2), np.float32), 0.9),
-            Crop(0.5, box(10, 10), np.zeros((5, 2), np.float32), 0.9),
-        ],
-    )
 
     monkeypatch.setattr(
         video_pipeline.quality,
@@ -397,12 +567,59 @@ def test_two_quality_approved_crops_are_enough_for_short_track(monkeypatch):
         def embed_aligned(self, crops):
             return np.tile(np.eye(512, dtype=np.float32)[0], (len(crops), 1))
 
-    summary = video_pipeline.summarise_track(
-        Engine(), track, 0, {0.0: frame, 0.5: frame}
+    engine = Engine()
+    tracker = IoUTracker(
+        VCFG.track_iou_threshold, VCFG.track_max_age_frames, VCFG.track_min_hits
     )
+    for timestamp_s in (0.0, 0.5):
+        associations = tracker.update([det(10, 10)], timestamp_s)
+        video_pipeline.observe(engine, associations, frame, timestamp_s, max_per_track=8)
+
+    track = tracker.finish()[0]
+    summary = video_pipeline.summarise_track(engine, track, 0)
+
     assert summary is not None
     assert summary.crop_count == 2
     assert settings.video.track_min_hits == 2
+
+
+def test_rejected_observations_still_maintain_the_track(monkeypatch):
+    """Spec §9 — a bad observation means TRACK ONLY, never RECOGNIZE ANYWAY.
+
+    The temporal-union principle depends on this: a face too small to embed now may
+    be sharp and close 300 ms later, and that only helps if the track survived the
+    bad stretch. So a rejected observation must still age the track forward and be
+    counted, while contributing no crop.
+    """
+    from app.services.quality import QualityResult
+
+    frame = np.full((120, 120, 3), 128, dtype=np.uint8)
+
+    # Every frame rejected: the worst case the gate can produce.
+    monkeypatch.setattr(
+        video_pipeline.quality,
+        "assess",
+        lambda face, image: QualityResult(False, reason="face_too_small"),
+    )
+
+    class Engine:
+        def align(self, image, kps):  # pragma: no cover - must never be reached
+            raise AssertionError("a rejected observation must not be aligned")
+
+    tracker = IoUTracker(
+        VCFG.track_iou_threshold, VCFG.track_max_age_frames, VCFG.track_min_hits
+    )
+    for i in range(5):
+        associations = tracker.update([det(10, 10)], timestamp_s=i * 0.5)
+        video_pipeline.observe(Engine(), associations, frame, i * 0.5, max_per_track=8)
+
+    track = tracker.finish()[0]
+    assert track.hits == 5                       # the track lived through all of it
+    assert track.observation_count == 5          # and counted every look
+    assert track.reject_reasons["face_too_small"] == 5
+    assert track.observations() == []            # but banked no evidence
+    # No evidence means no identity guess, not a guess from bad evidence.
+    assert video_pipeline.summarise_track(Engine(), track, 0) is None
 
 
 def test_corrupt_video_raises_a_readable_error(tmp_path):

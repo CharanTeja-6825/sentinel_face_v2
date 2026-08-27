@@ -71,6 +71,30 @@ video:
   track_max_age_frames: 15        # frames a track survives without detection
   track_min_hits: 2               # detections before a track is confirmed
 
+observation:
+  # VIDEO PATH ONLY (spec §7-§10, §19). Deliberately its own block rather than more
+  # keys under `quality:` — that block is shared with enrolment, and D9 is the record
+  # of what happens when a shared gate is tightened for one path. Nothing here is
+  # readable by the enrolment path, structurally.
+  #
+  # UNCALIBRATED. Every number below is a starting value; the report from
+  # `scripts/diagnose_video.py` is what sets them once real footage exists.
+  max_per_track: 8              # bounded best-observation buffer. Was "every accepted
+                                # crop", which is what made the pipeline retain frames.
+                                # 8 x 112x112x3 = 300 KB per track.
+
+  # Effective-resolution bands (§8, §19). The UNUSABLE/LOW boundary is NOT here: it is
+  # quality.min_face_width_px, reused rather than duplicated, so a band can never
+  # disagree with the gate that already rejects the crop.
+  band_medium_px: 90            # LOW  -> MEDIUM
+  band_high_px: 150             # MEDIUM -> HIGH
+
+  # Illumination beyond a mean (§8: backlit, uneven, blown). RECORDED, NOT GATED in
+  # this phase — no decision reads them. Gating on an uncalibrated number is how you
+  # silently zero a track.
+  max_luma_asymmetry: 0.45
+  max_clipped_fraction: 0.15
+
 matching:
   cluster_distance: 0.50          # agglomerative cosine distance
   # Two quality-approved samples are sufficient after track confirmation. This

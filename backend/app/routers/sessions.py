@@ -42,9 +42,12 @@ async def upload_video(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    data = await file.read()
-    return session_service.attach_video(
-        db, session_id, file.filename or "upload.mp4", data
+    # The UploadFile is passed through rather than `await file.read()`-ed here.
+    # Reading it whole put up to video.max_upload_mb — currently 2 GB — in the API
+    # process before anything touched disk, which is the same unbounded-buffer
+    # defect as §29.8 at the ingestion end. `attach_video` streams it.
+    return await session_service.attach_video(
+        db, session_id, file.filename or "upload.mp4", file
     )
 
 

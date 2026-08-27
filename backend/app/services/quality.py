@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 
-from app.config import QualityConfig, settings
+from app.config import ObservationConfig, QualityConfig, settings
 
 # Rejection reasons. The frontend maps these to friendly text (§11); the raw
 # codes are the API contract.
@@ -36,6 +36,15 @@ LOW_QUALITY = "low_quality"
 EYES_CLOSED = "eyes_closed"
 EXTREME_ROLL = "extreme_roll"
 NO_LANDMARKS = "no_landmarks"
+
+# Effective-resolution bands — spec §8, §19. VIDEO PATH ONLY, and RECORDED rather than
+# acted on in this phase: the rule that consumes them ("MEDIUM -> require more
+# evidence") needs boundaries measured against real footage, and inventing them now
+# would be exactly the blind retune §24 warns against.
+BAND_HIGH = "HIGH"
+BAND_MEDIUM = "MEDIUM"
+BAND_LOW = "LOW"
+BAND_UNUSABLE = "UNUSABLE"
 
 
 @dataclass
@@ -138,6 +147,68 @@ def blur_variance(gray: np.ndarray) -> float:
     return float(cv2.Laplacian(resized, cv2.CV_64F).var())
 
 
+# ─────────────── effective resolution and illumination (§8, §19) ───────────────
+#
+# Both are ADDITIVE. Neither changes an existing gate, threshold or return value:
+# `assess()` still accepts and rejects exactly the frames it did before. They exist so
+# that the distributions needed to calibrate §19 are on disk when footage arrives.
+
+
+def resolution_band(
+    width_px: float,
+    cfg: QualityConfig | None = None,
+    obs_cfg: ObservationConfig | None = None,
+) -> str:
+    """HIGH | MEDIUM | LOW | UNUSABLE from face width in source pixels.
+
+    The UNUSABLE/LOW boundary is `quality.min_face_width_px`, deliberately reused
+    rather than given its own key. That is what makes the band system incapable of
+    disagreeing with the gate: anything this calls UNUSABLE is exactly what `assess()`
+    already rejects as `face_too_small`, so introducing bands rejects nothing new.
+    """
+    cfg = cfg or settings.quality
+    obs_cfg = obs_cfg or settings.observation
+
+    if width_px < cfg.min_face_width_px:
+        return BAND_UNUSABLE
+    if width_px < obs_cfg.band_medium_px:
+        return BAND_LOW
+    if width_px < obs_cfg.band_high_px:
+        return BAND_MEDIUM
+    return BAND_HIGH
+
+
+def illumination_metrics(gray: np.ndarray) -> tuple[float, float]:
+    """(luma_asymmetry, clipped_fraction) — the §8 lighting failures a mean hides.
+
+    `assess()` gates on `gray.mean()` inside [min_brightness, max_brightness], which is
+    blind to the two cases that actually cost recognition:
+
+    * BACKLIT / UNEVEN — one side or half of the face in shadow. The mean sits happily
+      mid-range while half the identity information is gone. Measured as the larger of
+      the left/right and top/bottom half-mean differences, normalised by 255.
+    * BLOWN / CRUSHED — a correct mean built from saturated highlights and black
+      shadows. Measured as the fraction of pixels pinned at 0 or 255.
+
+    Pure numpy over a crop that is already in hand; no new dependency, no second pass
+    over the frame.
+    """
+    if gray.size == 0:
+        return 0.0, 0.0
+
+    g = gray.astype(np.float32)
+    h, w = g.shape[:2]
+
+    # Half-means. A 1px crop has no halves; guard rather than divide by zero.
+    lr = abs(float(g[:, : w // 2].mean()) - float(g[:, w - w // 2 :].mean())) if w >= 2 else 0.0
+    tb = abs(float(g[: h // 2, :].mean()) - float(g[h - h // 2 :, :].mean())) if h >= 2 else 0.0
+    asymmetry = max(lr, tb) / 255.0
+
+    clipped = float(np.count_nonzero((g <= 0) | (g >= 255))) / float(g.size)
+
+    return asymmetry, clipped
+
+
 # ──────────────────────── quality score (§7.3) ─────────────────────────
 
 
@@ -228,6 +299,11 @@ def assess(face, frame: np.ndarray, cfg: QualityConfig | None = None) -> Quality
     if abs(yaw) > cfg.max_yaw_ratio or abs(pitch) > cfg.max_pitch_ratio:
         return _reject(EXTREME_POSE, yaw=yaw, pitch=pitch)
 
+    # Recorded, not gated (§8, §19). These are the two numbers the §19 rule and the
+    # illumination gates will eventually be calibrated from; adding them to `detail`
+    # costs one pass over a crop that is already in hand and changes no decision.
+    asymmetry, clipped = illumination_metrics(gray)
+
     return QualityResult(
         accepted=True,
         quality_score=weighted_score(det_score, width, blur, yaw, pitch, cfg),
@@ -239,6 +315,9 @@ def assess(face, frame: np.ndarray, cfg: QualityConfig | None = None) -> Quality
             "width_px": width,
             "blur": blur,
             "brightness": mean_v,
+            "band": resolution_band(width, cfg),
+            "luma_asymmetry": asymmetry,
+            "clipped_fraction": clipped,
         },
     )
 
@@ -246,7 +325,7 @@ def assess(face, frame: np.ndarray, cfg: QualityConfig | None = None) -> Quality
 # ══════════════════ MediaPipe enrolment path (D12) ══════════════════════
 #
 # Everything above this line is unchanged and still serves Module B. `assess()` is
-# called by the video pipeline through a duck-typed `_CropFace` adapter, and
+# called by the video pipeline directly on a `tracking.Detection`, and
 # `min_crops_per_track` means a small tightening there silently zeroes whole tracks
 # — the D9 incident. So this is a parallel gate, not a rewrite of that one.
 #

@@ -52,6 +52,24 @@ class Track(Base):
     mean_quality: Mapped[float] = mapped_column(Float, nullable=False)
     best_crop_path: Mapped[str | None] = mapped_column(Text)
 
+    # ── §23 observability ──
+    #
+    # `crop_count` is how many observations SURVIVED the quality gate and were
+    # retained; `observation_count` is how many the track absorbed in total, and
+    # `reject_reasons` says what happened to the difference. That gap is the whole
+    # diagnostic: a track with 200 observations and 2 survivors, all rejected
+    # `face_too_small`, is a camera-placement problem, not a threshold problem
+    # (spec §25).
+    #
+    # All nullable — rows written before migration 0003 have no such numbers, and
+    # inventing a default would make a pre-existing run look measured.
+    observation_count: Mapped[int | None] = mapped_column(Integer)
+    resolution_band: Mapped[str | None] = mapped_column(String(16))
+    mean_face_width_px: Mapped[float | None] = mapped_column(Float)
+    mean_blur: Mapped[float | None] = mapped_column(Float)
+    mean_brightness: Mapped[float | None] = mapped_column(Float)
+    reject_reasons: Mapped[dict | None] = mapped_column(JSONB)
+
 
 class Observation(Base):
     __tablename__ = "observations"

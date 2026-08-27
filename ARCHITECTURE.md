@@ -313,15 +313,27 @@ Nine steps, all inside the RQ worker.
 
 ```mermaid
 flowchart TD
-    V["[1] decode + sample<br/>grab/retrieve at sample_fps"] --> DET["[2] detect<br/>SCRFD, tiled if 4K-class"]
-    DET --> TR["[3] track<br/>IoU + Hungarian"]
-    TR --> QG["[4] quality gate<br/>same quality.assess() as enrolment"]
-    QG --> EMB["[5] embed survivors<br/>glintr100, L2-normalised"]
+    subgraph loop["per sampled frame — the frame is released at the end of each pass"]
+        V["[1] decode + sample<br/>grab/retrieve at sample_fps"] --> DET["[2] detect<br/>SCRFD, tiled if 4K-class"]
+        DET --> TR["[3] track<br/>IoU + Hungarian"]
+        TR --> QG["[4] quality gate<br/>same quality.assess() as enrolment"]
+        QG -->|rejected| TO["track only<br/>counted, no crop kept"]
+        QG -->|accepted| BUF["align 112x112 -><br/>best-K buffer per track"]
+    end
+    BUF --> EMB["[5] embed survivors<br/>glintr100, L2-normalised"]
     EMB --> AGG["[6] aggregate per track<br/>mean embedding, renormalised"]
     AGG --> CL["[7] cluster tracks<br/>agglomerative, cosine"]
     CL --> AS["[8] assign to roster<br/>global one-to-one"]
     AS --> BD["[9] band + persist<br/>confident / uncertain / no_match"]
 ```
+
+**Steps 1-4 run as one pass, not as phases (D14).** They used to be separated: the loop decoded and
+tracked, and the quality gate ran afterwards — which meant every sampled frame had to be kept so the
+gate could re-read its pixels. 60 minutes of 4K at 2 fps is ~7,200 frames, roughly 180 GB.
+
+Scoring and aligning while the frame is in hand removes the need to keep it. Each track retains only
+the aligned 112x112 crops of its best `observation.max_per_track` looks, so worker memory scales with
+how many people are in the room rather than with how long the video is.
 
 ### 6.1 Sampling and detection (§8.3)
 
@@ -348,10 +360,21 @@ clustering rather than by a smarter tracker.
 
 ### 6.3 Aggregation and clustering — where the accuracy comes from (§8.2)
 
-**Step 6** is the temporal-union principle in code. Each track's crops are quality-gated with the
-*same* `quality.assess()` used at enrolment — one implementation, one behaviour — then the survivors
-are aligned to 112×112, embedded, and averaged into a single renormalised vector. Tracks with fewer
-than `min_crops_per_track` survivors are dropped rather than guessed at.
+**Step 6** is the temporal-union principle in code. Each observation is quality-gated with the *same*
+`quality.assess()` used at enrolment — one implementation, one behaviour — and the survivors are
+aligned to 112×112 as they are found. The best `max_per_track` of them are embedded and averaged into
+a single renormalised vector. Tracks with fewer than `min_crops_per_track` survivors are dropped
+rather than guessed at.
+
+A rejected observation still **maintains its track** — it just contributes no crop. This matters more
+than it looks: a face too small or too blurry to embed now is often sharp and close 300 ms later, and
+that second look is only usable if the track survived the bad stretch. Quality decides whether to
+RECOGNISE, never whether to TRACK. The reject reasons are counted per track and persisted, which is
+what lets a calibration run say *why* a track produced no usable evidence.
+
+The mean is currently **unweighted** over those survivors. Weighting it by quality is the obvious next
+move and is deliberately not made here: there is no labelled classroom footage to verify a weighting
+against, and `scripts/diagnose_video.py` exists to produce the measurements that would justify one.
 
 **Step 7** exists because trackers fragment. Someone who turns away or is briefly occluded returns
 with a new track id. Without merging, one student becomes four tracks and the one-to-one assignment
@@ -397,8 +420,11 @@ present is invisible and enables exactly the fraud the system is meant to preven
 
 ### 6.6 Job management (§8.7)
 
-`POST /sessions/{id}/video` validates size and duration, writes to `/storage/videos/{id}.mp4`, sets
-`status='queued'`, enqueues with `job_timeout='2h'`, and returns 202. The worker sets `processing`,
+`POST /sessions/{id}/video` **streams** the upload to `/storage/videos/{id}.mp4` in 1 MiB chunks,
+enforcing `max_upload_mb` as it copies rather than after, then validates duration, sets
+`status='queued'`, enqueues with `job_timeout='2h'`, and returns 202. Reading the body whole to take
+its length required a 2 GB upload to occupy 2 GB of API process before it could be rejected for being
+2 GB — the same unbounded-buffer defect as D14, at the ingestion end. The worker sets `processing`,
 commits `frames_sampled` every 25 frames so the UI shows real progress rather than an unresponsive
 spinner, and ends at `completed` or `failed` with the exception recorded in `error_message`.
 
@@ -407,6 +433,25 @@ unmatched faces and *auto* decisions, and clears the crop directory, before anyt
 
 Status flow: `created → uploaded → queued → processing → completed → finalized`, with `failed` as an
 exit from `processing`. `finalized` is a lock — no further edits, no re-runs.
+
+### 6.7 Observability, and how a threshold eventually gets calibrated
+
+Every `tracks` row carries what the track actually saw: `observation_count` (all associated
+detections), `crop_count` (how many survived the gate), `resolution_band`, the mean face width, blur
+and brightness, and a `reject_reasons` counter. Numbers only — no raw biometric frames are retained
+for telemetry. They reach the UI through the existing `GET /sessions/{id}/results`; no new endpoint.
+
+The gap between `observation_count` and `crop_count`, explained by `reject_reasons`, is the whole
+diagnostic. A track with 200 observations and 2 survivors, all rejected `face_too_small`, is a
+**camera placement problem**, not a threshold problem — and no amount of retuning `t_low` will fix
+it. Distinguishing those two cases is the point.
+
+`scripts/diagnose_video.py` turns one run into the calibration report: p5/p25/p50/p75/p95 for face
+width, quality score, blur and brightness; which gate is doing the rejecting; the band histogram;
+per-track evidence; and the cosine between the all-crops mean and the best-K mean, which is what
+validates the D14 buffer. **`config/thresholds.yaml` says at the top that every value in it requires
+calibration, and that remains true** — this is the instrument, not the calibration. Run it against
+real classroom footage before changing any number.
 
 ---
 
@@ -537,11 +582,27 @@ business logic may hardcode one** (§0.6) — functions take an optional `cfg` a
 |---|---|---|
 | `sample_fps` | 2.0 | frames analysed per second of footage |
 | `max_duration_minutes` / `max_upload_mb` | 60 / 2048 | upload limits |
-| `det_size` | 1024×1024 | SCRFD input **in the worker only** |
-| `track_iou_threshold` / `track_max_age_frames` / `track_min_hits` | 0.30 / 15 / 3 | tracker |
+| `det_size` | 640×640 | SCRFD input **in the worker only**. 1024×1024 missed faces on portrait 4K that 640 found reliably; the tile preserves the effective face scale |
+| `track_iou_threshold` / `track_max_age_frames` / `track_min_hits` | 0.30 / 15 / 2 | tracker |
 | `cluster_distance` | 0.50 | agglomerative cosine cut |
-| `min_crops_per_track` | 3 | below this a track is dropped, not guessed |
+| `min_crops_per_track` | 2 | below this a track is dropped, not guessed |
 | `t_high` / `t_low` / `margin_min` | 0.60 / 0.45 / 0.10 | banding |
+
+### `observation` — video path only (D14)
+
+Its own block rather than more keys under `quality:`, which is read by *both* modules. D9 is the
+record of what a shared-threshold change does when it goes wrong; the separation makes that class of
+mistake structurally impossible here.
+
+| Key | Value | Meaning |
+|---|---|---|
+| `max_per_track` | 8 | bounded best-observation buffer; ~300 KB of retained crops per track |
+| `band_medium_px` / `band_high_px` | 90 / 150 | effective-resolution bands. The UNUSABLE/LOW boundary is not here — it is `quality.min_face_width_px`, reused so a band can never disagree with the gate |
+| `max_luma_asymmetry` / `max_clipped_fraction` | 0.45 / 0.15 | backlit-and-uneven, and blown-or-crushed. **Recorded, not gated** — nothing reads them back yet |
+
+Bands and the illumination metrics are measurements in this phase, not decisions. The rule that would
+consume them ("MEDIUM resolution → require more evidence") needs boundaries measured against real
+classroom footage, and inventing them now is exactly the blind retune §13 warns about.
 
 > **Every value above is a starting point, not a calibrated one.** The two that have been corrected
 > against real footage are the *measurement* of `min_blur_variance` (D9) and the tiling trigger
@@ -597,7 +658,7 @@ deterministically without a photographed volunteer; the two criteria that are ge
 *detector* (no face, multiple faces) run against the real model over the real HTTP path.
 
 `scripts/diagnose_video.py` reports per-frame detection and quality outcomes for a video file — the
-tool that located the D9 blur bug.
+tool that located the D9 blur bug — and now also prints the §6.7 calibration report.
 
 **Not covered, because it needs a person:** a real human enrolling through the browser. That is a
 manual step.
@@ -607,7 +668,12 @@ manual step.
 ## 13. What this architecture deliberately does not prove
 
 - **Accuracy.** No labelled classroom video has been scored against ground truth. Every threshold in
-  `matching` is a default.
+  `matching` and `observation` is a default. `scripts/diagnose_video.py` will now produce the
+  distributions needed to set them, and `test_end_to_end_on_real_footage` is the stub waiting for the
+  footage — but the instrument existing is not the same as the measurement having been taken.
+- **That the resolution bands mean anything.** `band_medium_px` and `band_high_px` are guesses. The
+  footage in `storage/videos/` is all close-up enrolment video that scores 100% HIGH, so it cannot
+  place those boundaries; only classroom footage with real back rows can.
 - **Liveness.** A printed photograph held to the webcam will enrol, and a photograph in the
   classroom will be counted present.
 - **Scale.** One worker, one section, ~60 students. The queue boundary makes horizontal scaling
@@ -651,10 +717,10 @@ capstone/
 │       │   ├── gallery_service.py    # Module B: gallery, matching, banding
 │       │   └── session_service.py    # attendance lifecycle, results, overrides
 │       ├── workers/
-│       │   ├── video_pipeline.py # Module B: the nine steps
+│       │   ├── video_pipeline.py # Module B: the nine steps, gate in the frame loop
 │       │   └── worker.py         # RQ entrypoint
 │       └── utils/
-│           ├── tracking.py       # IoU tracker
+│           ├── tracking.py       # IoU tracker + FaceObservation, best-K buffer
 │           └── storage.py        # paths, crop persistence, crop_url
 └── frontend/src/
     ├── lib/api.ts                # axios client + every response type

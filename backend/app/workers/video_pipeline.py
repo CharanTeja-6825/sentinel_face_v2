@@ -15,6 +15,28 @@ The two steps that matter more than they look (§8.2):
   or is briefly occluded gets a new track_id on return. Without merging, one
   student becomes four tracks and the one-to-one assignment in step 8 marks
   three of them as unknown intruders (§14.5).
+
+WHERE THE QUALITY GATE RUNS (spec §7-§10, §29.8)
+────────────────────────────────────────────────
+Steps 4 and 5 used to run AFTER the whole video had been decoded, which meant
+step 1 had to hold every sampled frame in a dict so the pixels were still there
+to score and align. 60 minutes of 4K at 2 fps is ~7,200 frames, about 180 GB.
+
+The gate now runs inside the frame loop, against the frame in hand, and each
+track keeps only the aligned 112x112 crops of its best `observation.max_per_track`
+looks (`utils.tracking.Track.offer`). The frame is released as soon as the loop
+moves on. Memory is a function of how many people are in the room, not how long
+the video is.
+
+Two things did NOT change with it, deliberately:
+
+* Rejected observations still maintain their track (§9). A face too small or too
+  blurry to recognise is still worth following, because the same person is
+  usually recognisable 300 ms later. Quality decides whether to RECOGNISE, never
+  whether to TRACK.
+* Aggregation is still an unweighted mean over the survivors (step 6).
+  Quality-WEIGHTED aggregation is spec §15 and belongs to Phase 4, once the
+  distributions this phase records have been measured on real footage.
 """
 
 from __future__ import annotations
@@ -23,7 +45,7 @@ import logging
 import time
 import uuid
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import cv2
 import numpy as np
@@ -45,7 +67,7 @@ from app.services import gallery_service, quality
 from app.services.face_engine import FaceEngine, load_engine
 from app.services.roster_service import get_roster
 from app.utils import storage
-from app.utils.tracking import Detection, IoUTracker
+from app.utils.tracking import Detection, FaceObservation, IoUTracker, Track as TrackState
 
 log = logging.getLogger(__name__)
 
@@ -184,45 +206,94 @@ class TrackSummary:
     mean_quality: float
     best_crop: np.ndarray          # aligned 112x112 image of the best crop
     best_quality: float
+    # §23 diagnostics. Persisted so that thresholds can be calibrated from a real
+    # run rather than guessed at — see scripts/diagnose_video.py.
+    #
+    # Defaulted because they are telemetry, not identity: a summary carrying none of
+    # them is a legitimate object, and is exactly what a `tracks` row written before
+    # migration 0003 looks like. Nothing downstream branches on them.
+    observation_count: int = 0
+    resolution_band: str = ""
+    mean_face_width_px: float = 0.0
+    mean_blur: float = 0.0
+    mean_brightness: float = 0.0
+    reject_reasons: dict[str, int] = field(default_factory=dict)
+
+
+def observe(
+    engine: FaceEngine,
+    associations: list[tuple[TrackState, Detection]],
+    frame: np.ndarray,
+    timestamp_s: float,
+    max_per_track: int,
+) -> None:
+    """Step 4 plus the alignment half of step 5, for one frame — spec §8, §9, §10.
+
+    Called with the frame still in hand. Every associated detection is scored; the
+    good ones are aligned and offered to their track's bounded buffer; the bad ones
+    are counted and dropped. Nothing here keeps a reference to `frame`, which is
+    what lets the caller release it.
+
+    `Detection` is handed to `quality.assess()` directly — it already carries the
+    `.bbox`, `.kps` and `.det_score` the gate reads, which is why the `_CropFace`
+    adapter that used to live here is gone.
+    """
+    for track, det in associations:
+        result = quality.assess(det, frame)
+        track.record(result)
+
+        if not result.accepted:
+            continue                      # §9 — track only, do not recognise
+
+        # Ask before warping. On a long track most observations lose to the
+        # incumbents, and alignment is the expensive half of this loop.
+        if not track.would_accept(result.quality_score, max_per_track):
+            continue
+
+        track.offer(
+            result.quality_score,
+            FaceObservation(
+                timestamp_s=timestamp_s,
+                quality=result,
+                aligned=engine.align(frame, det.kps),
+            ),
+            max_per_track,
+        )
+
+
+def _mean_detail(observations: list[FaceObservation], key: str) -> float:
+    values = [float(o.quality.detail.get(key, 0.0)) for o in observations]
+    return float(np.mean(values)) if values else 0.0
 
 
 def summarise_track(
-    engine: FaceEngine,
-    track,
-    index: int,
-    frames: dict[float, np.ndarray],
+    engine: FaceEngine, track: TrackState, index: int
 ) -> TrackSummary | None:
-    """Quality-gate a track's crops, embed the survivors, average them."""
+    """Embed a track's retained observations and average them — steps 5, 6.
+
+    No `frames` argument any more: the crops were aligned while their frames were
+    live, and the quality scores came with them.
+    """
     cfg = settings.matching
 
-    aligned, qualities = [], []
-    for crop in track.crops:
-        frame = frames.get(crop.timestamp_s)
-        if frame is None:
-            continue
-
-        # Same quality gate as enrolment — one implementation, one behaviour.
-        face = _CropFace(crop.bbox, crop.kps, crop.det_score)
-        result = quality.assess(face, frame)
-        if not result.accepted:
-            continue
-
-        aligned.append(engine.align(frame, crop.kps))
-        qualities.append(result.quality_score)
+    observations = track.observations()      # best quality first
 
     # §5.1 min_crops_per_track — a track with too little evidence is dropped
     # rather than guessed at.
-    if len(aligned) < cfg.min_crops_per_track:
+    if len(observations) < cfg.min_crops_per_track:
         return None
+
+    aligned = [o.aligned for o in observations]
+    qualities = [o.quality.quality_score for o in observations]
 
     embeddings = engine.embed_aligned(aligned)
 
     # Step 6: mean embedding, re-normalised. This is where most of the accuracy
-    # comes from (§8.2).
+    # comes from (§8.2). Unweighted on purpose — see the module docstring.
     mean = embeddings.mean(axis=0)
     mean = mean / (np.linalg.norm(mean) + 1e-12)
 
-    best = int(np.argmax(qualities))
+    mean_width = _mean_detail(observations, "width_px")
     return TrackSummary(
         track_index=index,
         embedding=mean.astype(np.float32),
@@ -230,20 +301,18 @@ def summarise_track(
         last_seen_s=track.last_seen_s,
         crop_count=len(aligned),
         mean_quality=float(np.mean(qualities)),
-        best_crop=aligned[best],
-        best_quality=float(qualities[best]),
+        best_crop=observations[0].aligned,
+        best_quality=float(qualities[0]),
+        observation_count=track.observation_count,
+        # The band of the AVERAGE look, not of the best one. A track that was
+        # usable once and marginal for the rest is a LOW track; reporting it as
+        # HIGH would hide exactly the case §19 exists to handle.
+        resolution_band=quality.resolution_band(mean_width),
+        mean_face_width_px=mean_width,
+        mean_blur=_mean_detail(observations, "blur"),
+        mean_brightness=_mean_detail(observations, "brightness"),
+        reject_reasons=dict(track.reject_reasons),
     )
-
-
-class _CropFace:
-    """Adapter so quality.assess() can score a tracked detection."""
-
-    __slots__ = ("bbox", "kps", "det_score")
-
-    def __init__(self, bbox, kps, det_score):
-        self.bbox = bbox
-        self.kps = kps
-        self.det_score = det_score
 
 
 # ──────────────────────────── [7] cluster ──────────────────────────────
@@ -292,15 +361,21 @@ def run_pipeline(
         min_hits=cfg_video.track_min_hits,
     )
 
-    frames: dict[float, np.ndarray] = {}
+    max_per_track = settings.observation.max_per_track
+
     frames_sampled = 0
     detections_total = 0
 
     for timestamp_s, frame in sample_frames(session.video_path, cfg_video.sample_fps):
         detections = detect_frame(engine, frame)
         detections_total += len(detections)
-        frames[timestamp_s] = frame
-        tracker.update(detections, timestamp_s)
+
+        # Associate, then score and align against the frame we are still holding.
+        # Nothing below retains `frame`, so it is collectable the moment this
+        # iteration ends — §29.8, and the reason this loop looks the way it does.
+        associations = tracker.update(detections, timestamp_s)
+        observe(engine, associations, frame, timestamp_s, max_per_track)
+
         frames_sampled += 1
 
         # §8.7 — real progress for the UI, not an unresponsive spinner.
@@ -316,7 +391,7 @@ def run_pipeline(
 
     summaries = []
     for i, track in enumerate(tracks):
-        summary = summarise_track(engine, track, i, frames)
+        summary = summarise_track(engine, track, i)
         if summary is not None:
             summaries.append(summary)
 
@@ -374,6 +449,15 @@ def persist(session: AttendanceSession, db: Session, result: PipelineResult) -> 
                 crop_count=summary.crop_count,
                 mean_quality=summary.mean_quality,
                 best_crop_path=rel,
+                # §23 — numbers only, no retained biometric frames (§29.9). These
+                # are what a calibration run reads back; without them a threshold
+                # can only ever be guessed at.
+                observation_count=summary.observation_count,
+                resolution_band=summary.resolution_band,
+                mean_face_width_px=summary.mean_face_width_px,
+                mean_blur=summary.mean_blur,
+                mean_brightness=summary.mean_brightness,
+                reject_reasons=summary.reject_reasons,
             )
         )
 
