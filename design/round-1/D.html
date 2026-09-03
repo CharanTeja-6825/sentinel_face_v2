@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=panchang@300,400,600,800&f%5B%5D=supreme@300,400,500,700&display=swap">
+<style>
+  /* Enrolment asks for one orientation at a time and refuses everything else.
+     The page is organised the same way: each passage sits where its angle points,
+     and reading it requires the same five movements the capture requires. */
+  :root { --ink:#1B2019; --held:#5C6B57; --asked:#A03E2E; }
+  html { background:#EDEFEA; }
+  body { margin:0; background:#EDEFEA; color:var(--ink);
+         font-family:'Supreme',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .field { max-width:88rem; margin:0 auto; padding:4.5rem 3.5rem 7rem; }
+
+  .up      { text-align:center; }
+  .leftward{ text-align:left; max-width:30ch; margin-right:auto; }
+  .rightward{ text-align:right; max-width:30ch; margin-left:auto; }
+  .front   { text-align:center; margin-left:auto; margin-right:auto; max-width:24ch; }
+  .down    { text-align:center; margin-top:7.5rem; }
+
+  .prompt { font-family:'Panchang',sans-serif; font-weight:800;
+            font-size:clamp(3.4rem,11vw,9rem); line-height:0.86; letter-spacing:-0.045em;
+            margin:0; }
+  .prompt-mid { font-family:'Panchang',sans-serif; font-weight:600;
+                font-size:clamp(1.6rem,4.4vw,3.4rem); line-height:1.02;
+                letter-spacing:-0.03em; margin:0; }
+  .prompt-small { font-family:'Panchang',sans-serif; font-weight:400;
+                  font-size:clamp(1.125rem,2.2vw,1.625rem); line-height:1.25;
+                  letter-spacing:-0.015em; margin:0; }
+
+  .said { font-weight:400; font-size:1.0625rem; line-height:1.65; margin:0.9rem 0 0; }
+  .said-held { color:var(--held); }
+  .said-asked { color:var(--asked); font-weight:500; }
+
+  .angleword { font-family:'Panchang',sans-serif; font-weight:300;
+               font-size:clamp(1rem,1.9vw,1.25rem); letter-spacing:0.5em;
+               color:var(--held); margin:0; text-transform:lowercase; }
+  .gap-s { height:3.25rem; } .gap-m { height:6.5rem; } .gap-l { height:10rem; }
+
+  .figures { color:var(--asked); font-weight:700; font-size:0.9375rem;
+             letter-spacing:0.09em; font-variant-numeric:tabular-nums; margin:0; }
+  .roles { color:var(--held); font-weight:500; font-size:0.75rem; letter-spacing:0.36em;
+           text-transform:uppercase; margin:0; }
+</style></head><body>
+<div class="field">
+
+  <div class="up">
+    <p class="angleword">up</p>
+    <div class="gap-s"></div>
+    <p class="prompt-small">Attendance from the room, not from a roll call</p>
+  </div>
+
+  <div class="gap-l"></div>
+
+  <div class="leftward">
+    <p class="angleword">left</p>
+    <div class="gap-s"></div>
+    <p class="prompt-mid">Sixty candidates,<br>not twenty thousand.</p>
+    <p class="said said-asked">You are facing front — turn your head to your left</p>
+    <p class="said said-held">Move a little closer</p>
+  </div>
+
+  <div class="gap-m"></div>
+
+  <div class="front">
+    <p class="prompt">SentinelFace</p>
+    <div class="gap-s"></div>
+    <p class="angleword">front &nbsp; left &nbsp; right &nbsp; up &nbsp; down</p>
+  </div>
+
+  <div class="gap-m"></div>
+
+  <div class="rightward">
+    <p class="angleword">right</p>
+    <div class="gap-s"></div>
+    <p class="prompt-mid">No single frame is enough.<br>The mean of thirty is.</p>
+    <p class="said said-asked">An uncertain match is marked absent, never present.</p>
+    <p class="said said-held">Hold still — try better lighting</p>
+    <p class="said said-held">Captured front · quality 0.83</p>
+  </div>
+
+  <div class="gap-l"></div>
+
+  <div class="down">
+    <p class="prompt-small">confident &nbsp;&nbsp; uncertain &nbsp;&nbsp; no match</p>
+    <div class="gap-s"></div>
+    <p class="said said-held">Fifteen templates stored. The images are discarded.</p>
+    <div class="gap-s"></div>
+    <p class="figures">22BCE1234 &nbsp;&nbsp; 0.62 ≥ 0.60 &nbsp;&nbsp; margin 0.14</p>
+    <div class="gap-m"></div>
+    <p class="roles">Student &nbsp; Faculty &nbsp; Administrator</p>
+    <div class="gap-s"></div>
+    <p class="angleword">down</p>
+  </div>
+
+</div>
+</body></html>

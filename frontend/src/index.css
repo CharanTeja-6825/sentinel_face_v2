@@ -3,59 +3,69 @@
 @tailwind utilities;
 
 /*
- * Theme tokens.
+ * Theme tokens — direction C, locked. See design/ROUND-2-CONTEXT.md.
  *
- * These are bare HSL triplets, not full colour functions, because tailwind.config.js
- * wraps every one of them as `hsl(var(--token))`. The file previously held oklch()
- * values against that same config, which compiled to `hsl(oklch(1 0 0))` — invalid CSS
- * that browsers drop, so the entire palette was inert and every screen rendered on
- * user-agent defaults. Keep the two halves in the same colour space.
+ * Bare HSL triplets, not full colour functions, because tailwind.config.js wraps every
+ * one of them as `hsl(var(--token))`. Keep the two halves in the same colour space:
+ * the file once held oklch() against that same config, which compiled to
+ * `hsl(oklch(...))` — invalid CSS that browsers drop, so the entire palette was inert.
  *
- * Palette: slate-based, high contrast, one accent.
+ * The palette is FOUR message classes on one flat canvas, and there is no fifth. A
+ * colour here answers "what kind of thing is the system saying", never "how important
+ * is this":
+ *
+ *   accepted  #101014  it is settled            -> --foreground, --primary
+ *   refuse    #B3372B  it was rejected          -> --destructive
+ *   instruct  #2F6F62  do this next             -> --accent, --success
+ *   measure   #C2761A  this is a measured value -> --warning
+ *
+ * The legacy token names are kept so existing markup keeps resolving, and the four
+ * role names below are aliases for writing new code in the direction's own vocabulary.
  */
 @layer base {
   :root {
-    --background: 210 40% 98%;              /* #F8FAFC page */
-    --foreground: 215 25% 27%;              /* #334155 body text */
+    --background: 60 20% 98%;               /* #FBFBF9 — the one flat canvas */
+    --foreground: 240 7% 7%;                /* #101014 — accepted */
 
-    --card: 0 0% 100%;                      /* #FFFFFF surface */
-    --card-foreground: 222 47% 11%;         /* #0F172A headings on surface */
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    /* No card fill. Separation is hairlines and density, never a raised surface. */
+    --card: 60 20% 98%;
+    --card-foreground: 240 7% 7%;
+    --popover: 60 20% 98%;
+    --popover-foreground: 240 7% 7%;
 
-    --primary: 222 47% 11%;                 /* #0F172A */
-    --primary-foreground: 0 0% 100%;
+    --primary: 240 7% 7%;
+    --primary-foreground: 60 20% 98%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 60 9% 95%;
+    --secondary-foreground: 240 7% 7%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;        /* #64748B */
+    --muted: 60 9% 95%;                     /* the only tint on the ground: row hover */
+    --muted-foreground: 240 4% 42%;         /* #676770 */
 
-    --accent: 221 83% 53%;                  /* #2563EB */
-    --accent-foreground: 0 0% 100%;
-    --accent-light: 214 100% 97%;           /* #EFF6FF accent wash */
+    --accent: 168 41% 31%;                  /* #2F6F62 — instruct */
+    --accent-foreground: 60 20% 98%;
+    --accent-light: 168 30% 94%;            /* instruct wash */
 
-    --success: 142 71% 36%;                 /* #16A34A */
-    --success-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;               /* #DC2626 */
-    --destructive-foreground: 0 0% 100%;
-    --warning: 32 95% 44%;                  /* #D97706 */
-    --warning-foreground: 0 0% 100%;
+    --success: 168 41% 31%;                 /* an instruction carried out */
+    --success-foreground: 60 20% 98%;
+    --destructive: 6 55% 44%;               /* #B3372B — refuse */
+    --destructive-foreground: 60 20% 98%;
+    --warning: 33 68% 43%;                  /* #C2761A — measure */
+    --warning-foreground: 60 20% 98%;
 
-    --border: 214 32% 91%;                  /* #E2E8F0 */
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;                    /* focus ring is the accent */
+    --border: 45 9% 88%;                    /* hairline */
+    --input: 45 9% 84%;
+    --ring: 168 41% 31%;                    /* focus ring is the instruct colour */
 
-    --radius: 0.625rem;
+    --radius: 0.125rem;                     /* precise, not soft */
   }
 }
 
 /*
- * No `.dark` block. `darkMode: ["class"]` is configured but nothing in the app ever
- * adds the class, so the previous dark palette was unreachable code — and it was a
- * stale zinc set, not a considered inversion of this one. Add a real second palette
- * when a toggle is actually wanted.
+ * No `.dark` block. Direction C commits to a light canvas, and `darkMode: ["class"]`
+ * is configured but nothing in the app ever adds the class — a dark palette here would
+ * be unreachable code. Adding one means reopening the locked direction, not editing
+ * this file.
  */
 
 @layer base {
@@ -64,10 +74,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+  /* Human statements only. Everything else stays in the machine voice. */
   h1, h2, h3, h4 {
-    @apply text-card-foreground font-semibold tracking-tight;
+    @apply font-display text-foreground;
   }
 }
 
@@ -75,5 +85,17 @@
   /* Numeric readouts that update in place must not reflow as digits change. */
   .tnum {
     font-variant-numeric: tabular-nums;
+  }
+  /* Log density — reserved for actual machine logs (capture feed, detection readout). */
+  .log {
+    font-size: 0.8125rem;
+    line-height: 2.15;
+    letter-spacing: -0.012em;
+  }
+  /* The uppercase stamp: nav items, section markers, roles. */
+  .stamp {
+    font-size: 0.6875rem;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
   }
 }

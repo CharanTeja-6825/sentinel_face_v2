@@ -58,19 +58,19 @@ export default function VideoUpload({
       )}
       {tooBig && (
         <Alert variant="destructive">
-          <AlertDescription>
+          <AlertDescription data-slot="body">
             Larger than the {MAX_UPLOAD_MB} MB limit.
           </AlertDescription>
         </Alert>
       )}
-      {pct !== null && <Progress value={pct} className="h-2 [&>*]:bg-accent" />}
+      {pct !== null && <Progress value={pct} className="h-2" />}
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription data-slot="body">{error}</AlertDescription>
         </Alert>
       )}
       <Button
-        className="bg-accent text-accent-foreground hover:bg-accent/90"
+        variant="instruct"
         disabled={!file || tooBig || pct !== null}
         onClick={upload}
       >

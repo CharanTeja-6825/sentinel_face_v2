@@ -94,7 +94,22 @@ class FaceEngine:
             allowed_modules=["detection", "recognition"],
         )
         self.app.prepare(ctx_id=ctx_id, det_size=self.det_size)
-        log.info("antelopev2 ready")
+
+        # A truncated model download leaves scrfd present and glintr100 absent.
+        # insightface then loads detection only, `Face.normed_embedding` returns
+        # None, and every embedding silently becomes a 0-d array — faces are
+        # found, nobody is ever recognised, and /health reports "loaded: true".
+        # `ensure_available` cannot rescue it either: the directory exists, so
+        # the re-download is skipped forever. Fail loudly at load instead.
+        missing = {"detection", "recognition"} - set(self.app.models)
+        if missing:
+            raise RuntimeError(
+                f"antelopev2 loaded without {sorted(missing)}. The model pack in "
+                f"{settings.model_root} is incomplete — recognition needs "
+                "glintr100.onnx and detection needs scrfd_10g_bnkps.onnx. Delete "
+                "the antelopev2 directory and restart to re-download it."
+            )
+        log.info("antelopev2 ready: %s", sorted(self.app.models))
 
     def detect(self, bgr_image: np.ndarray) -> list:
         """Returns insightface Face objects.

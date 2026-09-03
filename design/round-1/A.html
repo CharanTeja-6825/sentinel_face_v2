@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=zodiak@400,700,300&f%5B%5D=synonym@400,500,600&display=swap">
+<style>
+  :root { --ink:#16130E; --answer:#9A7B4F; }
+  html { background:#F2EFE7; }
+  body { margin:0; background:#F2EFE7; color:var(--ink);
+         font-family:'Zodiak',Georgia,serif; -webkit-font-smoothing:antialiased; }
+  .sheet { max-width:74rem; margin:0 auto; padding:9rem 3rem 12rem; }
+
+  /* The call is spoken. It sits on the left margin and holds the pitch. */
+  .call { font-weight:400; font-size:clamp(2.6rem,6.4vw,5.2rem); line-height:0.98;
+          letter-spacing:-0.022em; max-width:20ch; }
+  .call em { font-style:italic; font-weight:300; }
+
+  /* The answer comes back smaller, later, and from further into the room. */
+  .answer { font-family:'Synonym',system-ui,sans-serif; color:var(--answer);
+            font-weight:500; font-size:1rem; line-height:1.55; letter-spacing:0.005em;
+            max-width:34ch; margin-left:auto; text-align:left; }
+  .answer.deep { margin-left:auto; margin-right:0; }
+  .answer.near { margin-left:38%; margin-right:auto; }
+
+  /* The pause between call and answer is the measured interval, never a gap that
+     happens to be left over. Three lengths only: beat, breath, silence. */
+  .beat    { height:2.25rem; }
+  .breath  { height:5.5rem; }
+  .silence { height:11rem; }
+
+  .roll { font-family:'Synonym',system-ui,sans-serif; font-weight:600;
+          font-size:0.8125rem; letter-spacing:0.16em; text-transform:uppercase;
+          color:var(--answer); }
+  .verdicts { font-weight:700; font-size:clamp(1.5rem,3vw,2.4rem); line-height:1.25;
+              letter-spacing:-0.01em; }
+  .verdicts span { font-weight:300; color:var(--answer); }
+  .angles { font-family:'Synonym',system-ui,sans-serif; font-weight:400;
+            font-size:0.9375rem; letter-spacing:0.42em; text-transform:lowercase;
+            color:var(--answer); }
+  .close { font-size:clamp(1.75rem,3.6vw,3rem); font-weight:400; line-height:1.15;
+           letter-spacing:-0.015em; max-width:26ch; }
+  .num { font-family:'Synonym',system-ui,sans-serif; font-weight:600;
+         font-size:0.9375rem; letter-spacing:0.05em; font-variant-numeric:tabular-nums;
+         color:var(--answer); }
+</style></head><body>
+<div class="sheet">
+
+  <p class="call">SentinelFace</p>
+  <div class="beat"></div>
+  <p class="answer near">Attendance from the room, not from a roll call</p>
+
+  <div class="silence"></div>
+
+  <p class="call">Sixty candidates,<br><em>not twenty thousand.</em></p>
+  <div class="breath"></div>
+  <p class="answer deep">22BCE1234</p>
+
+  <div class="silence"></div>
+
+  <p class="verdicts">confident<br><span>uncertain</span><br><span>no match</span></p>
+  <div class="breath"></div>
+  <p class="answer deep">An uncertain match is marked absent, never present.</p>
+
+  <div class="silence"></div>
+
+  <p class="angles">front &nbsp; left &nbsp; right &nbsp; up &nbsp; down</p>
+  <div class="beat"></div>
+  <p class="answer near">Move a little closer</p>
+  <div class="beat"></div>
+  <p class="answer near">Hold still — try better lighting</p>
+  <div class="beat"></div>
+  <p class="answer near">You are facing front — turn your head to your left</p>
+  <div class="beat"></div>
+  <p class="answer near">Captured front · quality 0.83</p>
+
+  <div class="silence"></div>
+
+  <p class="close">No single frame is enough.<br><em>The mean of thirty is.</em></p>
+  <div class="breath"></div>
+  <p class="answer deep">Fifteen templates stored. The images are discarded.</p>
+  <div class="beat"></div>
+  <p class="num">0.62 ≥ 0.60 &nbsp;&nbsp; margin 0.14</p>
+
+  <div class="silence"></div>
+
+  <p class="roll">Student &nbsp; Faculty &nbsp; Administrator</p>
+
+</div>
+</body></html>

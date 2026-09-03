@@ -55,10 +55,10 @@ export default function PoseDial({
 
   return (
     <div className="space-y-2">
-      <div className="relative aspect-square w-full overflow-hidden rounded-md border bg-muted/40">
+      <div className="relative aspect-square w-full overflow-hidden rounded-sm border border-border">
         {target && zones[target] && (
           <div
-            className="absolute rounded-sm bg-accent-light ring-1 ring-inset ring-accent/25"
+            className="absolute rounded-sm ring-1 ring-inset ring-instruct/40"
             style={zones[target]}
           />
         )}
@@ -66,9 +66,9 @@ export default function PoseDial({
         <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
         <div
           className={cn(
-            "absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-card",
+            "absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-background",
             "transition-all duration-300 ease-out",
-            !pose ? "bg-muted-foreground/40" : inZone ? "bg-success" : "bg-accent",
+            !pose ? "bg-muted-foreground/40" : inZone ? "bg-measure" : "bg-instruct",
           )}
           style={{ left: `${50 + x * 50}%`, top: `${50 + y * 50}%` }}
         />

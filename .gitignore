@@ -32,3 +32,6 @@ htmlcov/
 
 # Local knowledge-graph artifacts
 graphify-out/
+
+# Build output — a stale copy was committed and drifted from src.
+frontend/dist/

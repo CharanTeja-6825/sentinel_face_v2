@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=erode@300,400,500,600,700&display=swap">
+<style>
+  /* One look proves nothing; thirty looks average into a person. The page says the
+     same sentence many times, each attempt fainter and smaller than the last, until
+     the accumulation — not any single line — becomes the statement that holds. */
+  :root { --held:#2A2622; --attempt:#B9AFA1; }
+  html { background:#FFFDF8; }
+  body { margin:0; background:#FFFDF8; color:var(--held);
+         font-family:'Erode',Georgia,serif; -webkit-font-smoothing:antialiased; }
+  .column { max-width:52rem; margin:0 auto; padding:6rem 2.5rem 9rem; }
+
+  /* the accumulating attempts: same words, decreasing presence */
+  .a { color:var(--attempt); margin:0; font-weight:400; }
+  .a1 { font-size:2.75rem; line-height:1.16; letter-spacing:-0.024em; font-weight:600; }
+  .a2 { font-size:2.125rem; line-height:1.2;  letter-spacing:-0.02em;  font-weight:500; }
+  .a3 { font-size:1.625rem; line-height:1.26; letter-spacing:-0.015em; font-weight:400; }
+  .a4 { font-size:1.25rem;  line-height:1.34; letter-spacing:-0.01em;  font-weight:400; font-style:italic; }
+  .a5 { font-size:1rem;     line-height:1.45; letter-spacing:-0.004em; font-weight:400; font-style:italic; }
+  .a6 { font-size:0.8125rem;line-height:1.6;  letter-spacing:0.004em;  font-weight:300; font-style:italic; }
+
+  /* the resolution: full weight, full size, held */
+  .resolved { margin:3.5rem 0 0; font-weight:700; font-size:clamp(2.5rem,6.4vw,4.75rem);
+              line-height:1.02; letter-spacing:-0.034em; max-width:16ch; }
+  .resolved-sub { margin:1.25rem 0 0; font-weight:400; font-style:italic;
+                  font-size:clamp(1.125rem,2.2vw,1.5rem); line-height:1.35;
+                  letter-spacing:-0.012em; max-width:30ch; }
+
+  .plain { margin:0 0 0.55rem; font-weight:500; font-size:1.125rem; line-height:1.5; }
+  .faint { color:var(--attempt); margin:0 0 0.4rem; font-weight:400; font-size:1rem;
+           line-height:1.55; }
+  .figures { margin:0; font-weight:600; font-size:0.9375rem; letter-spacing:0.02em;
+             font-variant-numeric:tabular-nums; }
+  .roles { color:var(--attempt); margin:0; font-weight:400; font-size:0.8125rem;
+           letter-spacing:0.28em; text-transform:uppercase; }
+  .sp-s { height:2.5rem; } .sp-m { height:5rem; } .sp-l { height:8.5rem; }
+</style></head><body>
+<div class="column">
+
+  <p class="a a1">No single frame is enough.</p>
+  <p class="a a2">No single frame is enough.</p>
+  <p class="a a3">No single frame is enough.</p>
+  <p class="a a4">No single frame is enough.</p>
+  <p class="a a5">No single frame is enough.</p>
+  <p class="a a6">No single frame is enough.</p>
+
+  <p class="resolved">The mean of thirty is.</p>
+  <p class="resolved-sub">Attendance from the room, not from a roll call</p>
+
+  <div class="sp-l"></div>
+
+  <p class="a a4">Move a little closer</p>
+  <p class="a a5">Hold still — try better lighting</p>
+  <p class="a a5">You are facing front — turn your head to your left</p>
+  <p class="a a6">Move a little closer</p>
+  <p class="a a6">Hold still — try better lighting</p>
+  <p class="plain">Captured front · quality 0.83</p>
+
+  <div class="sp-m"></div>
+
+  <p class="plain">SentinelFace</p>
+  <p class="plain">Sixty candidates, not twenty thousand.</p>
+  <p class="plain">An uncertain match is marked absent, never present.</p>
+  <p class="faint">Fifteen templates stored. The images are discarded.</p>
+
+  <div class="sp-m"></div>
+
+  <p class="a a3">confident</p>
+  <p class="a a4">uncertain</p>
+  <p class="a a6">no match</p>
+
+  <div class="sp-s"></div>
+  <p class="faint">front &nbsp; left &nbsp; right &nbsp; up &nbsp; down</p>
+  <div class="sp-s"></div>
+  <p class="figures">22BCE1234 &nbsp;&nbsp; 0.62 ≥ 0.60 &nbsp;&nbsp; margin 0.14</p>
+  <div class="sp-m"></div>
+  <p class="roles">Student &nbsp; Faculty &nbsp; Administrator</p>
+
+</div>
+</body></html>

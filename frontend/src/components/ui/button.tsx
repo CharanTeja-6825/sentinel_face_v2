@@ -4,26 +4,46 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Variants are message classes, not decoration — see design/ROUND-2-CONTEXT.md.
+ *
+ * `instruct` is the primary action: it is the system telling you what to do next, and
+ * it carries the display face because that is a human statement rather than machine
+ * speech. `refuse` is for irreversible and destructive actions only.
+ *
+ * Before the lock there was no accent variant at all, so five call sites pasted the
+ * identical override string and the one button that did not — "Finalize session",
+ * the most consequential action in the app — ended up as the only differently
+ * coloured button in the product, by accident.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:border-border disabled:bg-muted disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
+        instruct:
+          "bg-instruct font-display font-medium tracking-tight text-instruct-foreground hover:bg-instruct/90",
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+          "bg-primary font-display font-medium tracking-tight text-primary-foreground hover:bg-primary/90",
+        refuse:
+          "bg-refuse font-display font-medium tracking-tight text-refuse-foreground hover:bg-refuse/90",
+        // Kept as an alias so shadcn call sites that ask for `destructive` land on
+        // the refuse class rather than silently falling through to `default`.
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-refuse font-display font-medium tracking-tight text-refuse-foreground hover:bg-refuse/90",
+        // These previously said `hover:bg-accent`, which — once accent became a real
+        // brand colour — made every secondary button flip to a solid fill on hover.
         outline:
-          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-background hover:bg-muted hover:text-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-secondary text-secondary-foreground hover:bg-muted",
+        ghost: "hover:bg-muted hover:text-foreground",
+        link: "text-instruct underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
+        sm: "h-8 px-3 text-xs",
+        lg: "h-11 px-6 text-lg",
         icon: "h-9 w-9",
       },
     },

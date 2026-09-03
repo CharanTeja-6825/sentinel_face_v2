@@ -1,26 +1,38 @@
 /** @type {import('tailwindcss').Config} */
+//
+// Direction C, locked — see design/ROUND-2-CONTEXT.md.
+//
+// Two voices: `font-sans` (the default) IS the mono, because most of what this
+// interface says is machine speech; `font-display` carries human statements.
+//
 export default {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          "Inter",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
+        sans: ["Azeret Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        mono: ["Azeret Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        display: ["Clash Display", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
+      // One scale, declared once. Every page previously invented its own heading
+      // size — text-3xl on three pages, text-2xl on a fourth, CardTitle overridden
+      // to text-base at seven call sites. Redefining the steps here fixes the scale
+      // globally instead of at every use.
+      fontSize: {
+        xs:   ["0.75rem",   { lineHeight: "1.6" }],
+        sm:   ["0.8125rem", { lineHeight: "1.7" }],
+        base: ["0.875rem",  { lineHeight: "1.7" }],
+        lg:   ["1rem",      { lineHeight: "1.55" }],
+        xl:   ["1.25rem",   { lineHeight: "1.3",  letterSpacing: "-0.02em" }],
+        "2xl":["1.75rem",   { lineHeight: "1.12", letterSpacing: "-0.028em" }],
+        "3xl":["2.5rem",    { lineHeight: "0.98", letterSpacing: "-0.035em" }],
+        "4xl":["3.5rem",    { lineHeight: "0.94", letterSpacing: "-0.04em" }],
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "var(--radius)",
+        sm: "var(--radius)",
       },
       colors: {
         background: "hsl(var(--background))",
@@ -50,8 +62,6 @@ export default {
           foreground: "hsl(var(--accent-foreground))",
           light: "hsl(var(--accent-light))",
         },
-        // Was a flat string, which meant `text-destructive-foreground` did not exist —
-        // and both button.tsx and badge.tsx reference it in their destructive variants.
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -64,14 +74,33 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        // The four message classes under their own names, so new code reads in the
+        // locked direction's vocabulary rather than in shadcn's. Same values as the
+        // legacy tokens above — aliases, not a fifth colour.
+        accepted: "hsl(var(--foreground))",
+        refuse: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        instruct: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          wash: "hsl(var(--accent-light))",
+        },
+        measure: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        // chart-* and sidebar-* removed: nothing in the app referenced them.
       },
+      // C has one flat canvas and no shapes. Separation is hairlines and density.
+      // Defined as `none` rather than deleted so the eleven existing `shadow-card`
+      // call sites cannot reintroduce a raised surface.
       boxShadow: {
-        card: "0 1px 2px 0 hsl(222 47% 11% / 0.04), 0 1px 3px 0 hsl(222 47% 11% / 0.06)",
-        lift: "0 4px 12px -2px hsl(222 47% 11% / 0.08), 0 2px 6px -2px hsl(222 47% 11% / 0.05)",
+        card: "none",
+        lift: "none",
       },
     },
   },

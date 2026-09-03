@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=azeret-mono@300,400,500,700&f%5B%5D=clash-display@400,500,600,700&display=swap">
+<style>
+  /* The gate refuses many times and accepts once. The refusals are machine speech,
+     stacked and dense; the acceptance is human speech, and it takes the whole width. */
+  :root { --accept:#101014; --refuse:#B3372B; --ask:#2F6F62; --measure:#C2761A; }
+  html { background:#FBFBF9; }
+  body { margin:0; background:#FBFBF9; color:var(--accept);
+         font-family:'Azeret Mono',ui-monospace,monospace; -webkit-font-smoothing:antialiased; }
+  .page { display:grid; grid-template-columns:minmax(17rem,26fr) minmax(0,44fr);
+          column-gap:4.5rem; max-width:82rem; margin:0 auto; padding:4rem 3rem 8rem;
+          align-items:start; }
+  @media (max-width:900px){ .page { grid-template-columns:1fr; row-gap:3.5rem; } }
+
+  /* left column: everything the system would not accept, and what it asked for instead */
+  .log { font-size:0.8125rem; line-height:2.15; letter-spacing:-0.012em; }
+  .log .r { color:var(--refuse); font-weight:500; display:block; }
+  .log .q { color:var(--ask); font-weight:400; display:block; }
+  .log .m { color:var(--measure); font-weight:700; display:block;
+            font-variant-numeric:tabular-nums; }
+  .log .gap { display:block; height:1.6rem; }
+  .stamp { color:var(--ask); font-size:0.6875rem; font-weight:400; letter-spacing:0.26em;
+           text-transform:uppercase; margin:0 0 2.25rem; }
+
+  /* right column: the one thing it did accept */
+  .accepted { font-family:'Clash Display','Clash Display',sans-serif; font-weight:600;
+              font-size:clamp(3.25rem,8vw,6.5rem); line-height:0.94; letter-spacing:-0.035em;
+              margin:0 0 1.5rem; max-width:13ch; }
+  .accepted-sub { font-family:'Clash Display',sans-serif; font-weight:400;
+                  font-size:clamp(1.375rem,2.8vw,2.125rem); line-height:1.2;
+                  letter-spacing:-0.02em; margin:0 0 3.5rem; max-width:22ch; }
+  .claims { font-family:'Clash Display',sans-serif; font-weight:500;
+            font-size:clamp(1.125rem,1.9vw,1.5rem); line-height:1.45;
+            letter-spacing:-0.012em; margin:0 0 1.1rem; max-width:28ch; }
+  .claims.warn { color:var(--refuse); }
+  .figures { color:var(--measure); font-weight:700; font-size:1rem; line-height:2;
+             letter-spacing:0.02em; font-variant-numeric:tabular-nums; margin:3.25rem 0 0; }
+  .roles { color:var(--ask); font-size:0.75rem; font-weight:400; letter-spacing:0.3em;
+           text-transform:uppercase; margin:6rem 0 0; }
+</style></head><body>
+<div class="page">
+
+  <div class="log">
+    <p class="stamp">front left right up down</p>
+    <span class="r">Move a little closer</span>
+    <span class="r">Hold still — try better lighting</span>
+    <span class="q">You are facing front — turn your head to your left</span>
+    <span class="gap"></span>
+    <span class="r">Move a little closer</span>
+    <span class="q">You are facing front — turn your head to your left</span>
+    <span class="r">Hold still — try better lighting</span>
+    <span class="gap"></span>
+    <span class="m">Captured front · quality 0.83</span>
+    <span class="gap"></span>
+    <span class="r">Hold still — try better lighting</span>
+    <span class="r">Move a little closer</span>
+    <span class="q">You are facing front — turn your head to your left</span>
+    <span class="gap"></span>
+    <span class="m">22BCE1234</span>
+    <span class="m">0.62 ≥ 0.60</span>
+    <span class="m">margin 0.14</span>
+  </div>
+
+  <div>
+    <h1 class="accepted">SentinelFace</h1>
+    <p class="accepted-sub">Attendance from the room, not from a roll call</p>
+    <p class="claims">Sixty candidates, not twenty thousand.</p>
+    <p class="claims">No single frame is enough. The mean of thirty is.</p>
+    <p class="claims warn">An uncertain match is marked absent, never present.</p>
+    <p class="claims">Fifteen templates stored. The images are discarded.</p>
+    <p class="figures">confident &nbsp;&nbsp; uncertain &nbsp;&nbsp; no match</p>
+    <p class="roles">Student &nbsp; Faculty &nbsp; Administrator</p>
+  </div>
+
+</div>
+</body></html>

@@ -49,7 +49,7 @@ export default function AngleGuide({
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {done ? "Complete" : `Step ${step} of ${angles.length}`}
         </p>
-        <h2 className="mt-1.5 text-2xl leading-tight">
+        <h2 className="mt-1.5 text-xl font-medium leading-tight text-instruct">
           {done ? "All angles captured" : anglePrompt(current!)}
         </h2>
         {!done && (
@@ -66,32 +66,28 @@ export default function AngleGuide({
             <li
               key={angle}
               className={cn(
-                "rounded-md border px-3 py-2 transition-colors",
+                "rounded-sm border-l-2 px-3 py-2 transition-colors",
                 active
-                  ? "border-accent/40 bg-accent-light"
+                  ? "border-l-instruct"
                   : complete
-                    ? "border-transparent bg-muted/50"
-                    : "border-transparent",
+                    ? "border-l-measure/50"
+                    : "border-l-border",
               )}
             >
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
                     "text-sm capitalize",
-                    active
-                      ? "font-semibold text-card-foreground"
-                      : complete
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground",
+                    active ? "font-semibold text-instruct" : "text-muted-foreground",
                   )}
                 >
                   {angle}
                 </span>
-                {complete && <Check className="h-3.5 w-3.5 text-success" />}
+                {complete && <Check className="h-3.5 w-3.5 text-measure" />}
                 <span
                   className={cn(
                     "tnum ml-auto text-xs",
-                    complete ? "text-success" : "text-muted-foreground",
+                    complete ? "font-semibold text-measure" : "text-muted-foreground",
                   )}
                 >
                   {n}/{perAngle}
@@ -99,14 +95,7 @@ export default function AngleGuide({
               </div>
               <Progress
                 value={Math.min(100, (n / perAngle) * 100)}
-                className={cn(
-                  "mt-2 h-1",
-                  complete
-                    ? "[&>*]:bg-success"
-                    : active
-                      ? "[&>*]:bg-accent"
-                      : "[&>*]:bg-muted-foreground/30",
-                )}
+                className="mt-2 h-1"
               />
             </li>
           );

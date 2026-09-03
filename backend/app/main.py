@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
-from app.routers import admin, enrolment, sessions, timetable
+from app.routers import admin, enrolment, recognition, sessions, timetable
 from app.services import face_engine, mp_face
 
 logging.basicConfig(
@@ -71,6 +71,7 @@ app.include_router(timetable.router)
 app.include_router(enrolment.router)
 app.include_router(sessions.router)
 app.include_router(admin.router)
+app.include_router(recognition.router)
 
 
 @app.get("/health")

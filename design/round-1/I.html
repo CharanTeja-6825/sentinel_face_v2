@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>I</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=khand@400,500,600,700&f%5B%5D=recia@400,500,600&display=swap">
+<style>
+  /* A class is not an event, it is a window: consecutive periods merge into one
+     block, and everything the system decides is scoped to that window. The page is
+     read as a schedule — successive horizontal registers, each given a measure and a
+     leading proportional to how long it lasts. */
+  :root { --ink:#211E1B; --span:#6E5B45; --mark:#2C5F8A; }
+  html { background:#F4F1EC; }
+  body { margin:0; background:#F4F1EC; color:var(--ink);
+         font-family:'Recia',Georgia,serif; -webkit-font-smoothing:antialiased; }
+  .schedule { max-width:76rem; margin:0 auto; padding:3.5rem 3rem 8rem; }
+
+  /* each register: a condensed marker, then the passage it covers */
+  .register { display:grid; grid-template-columns:9rem minmax(0,1fr); column-gap:2.5rem;
+              align-items:baseline; }
+  @media (max-width:760px){ .register { grid-template-columns:1fr; column-gap:0; } }
+
+  .marker { font-family:'Khand',system-ui,sans-serif; font-weight:600;
+            font-size:1.0625rem; letter-spacing:0.2em; text-transform:uppercase;
+            color:var(--span); margin:0; }
+  .marker-mark { color:var(--mark); }
+
+  /* duration expressed as leading and measure: a long block breathes, a short one does not */
+  .long  { font-weight:400; font-size:clamp(1.5rem,3.4vw,2.5rem); line-height:1.72;
+           letter-spacing:-0.014em; max-width:30ch; margin:0 0 5.5rem; }
+  .med   { font-weight:500; font-size:clamp(1.125rem,2.1vw,1.5rem); line-height:1.42;
+           letter-spacing:-0.008em; max-width:40ch; margin:0 0 3.25rem; }
+  .short { font-weight:400; font-size:1rem; line-height:1.22; letter-spacing:0.004em;
+           max-width:58ch; margin:0 0 1.75rem; }
+  .title { font-family:'Khand',system-ui,sans-serif; font-weight:700;
+           font-size:clamp(3rem,9vw,7rem); line-height:0.92; letter-spacing:-0.01em;
+           text-transform:uppercase; margin:0 0 0.5rem; }
+  .mark { color:var(--mark); }
+  .span-text { color:var(--span); }
+  .figures { font-family:'Khand',system-ui,sans-serif; color:var(--mark); font-weight:600;
+             font-size:1.0625rem; letter-spacing:0.1em; font-variant-numeric:tabular-nums;
+             margin:0 0 1.75rem; }
+  .roles { font-family:'Khand',system-ui,sans-serif; color:var(--span); font-weight:500;
+           font-size:0.9375rem; letter-spacing:0.3em; text-transform:uppercase; margin:0; }
+</style></head><body>
+<div class="schedule">
+
+  <p class="title">SentinelFace</p>
+
+  <div class="register">
+    <p class="marker">front</p>
+    <p class="long">Attendance from the room, not from a roll call</p>
+  </div>
+
+  <div class="register">
+    <p class="marker">left</p>
+    <p class="med">Sixty candidates, not twenty thousand.</p>
+  </div>
+
+  <div class="register">
+    <p class="marker">right</p>
+    <p class="long">No single frame is enough. <span class="span-text">The mean of thirty is.</span></p>
+  </div>
+
+  <div class="register">
+    <p class="marker marker-mark">confident</p>
+    <p class="med">Captured front · quality 0.83</p>
+  </div>
+
+  <div class="register">
+    <p class="marker marker-mark">uncertain</p>
+    <p class="med">An uncertain match is marked absent, never present.</p>
+  </div>
+
+  <div class="register">
+    <p class="marker">up</p>
+    <div>
+      <p class="short">Move a little closer</p>
+      <p class="short">Hold still — try better lighting</p>
+      <p class="short">You are facing front — turn your head to your left</p>
+    </div>
+  </div>
+
+  <div class="register">
+    <p class="marker">down</p>
+    <p class="med span-text">Fifteen templates stored. The images are discarded.</p>
+  </div>
+
+  <div class="register">
+    <p class="marker">no match</p>
+    <div>
+      <p class="figures">22BCE1234 &nbsp;&nbsp; 0.62 ≥ 0.60 &nbsp;&nbsp; margin 0.14</p>
+      <p class="roles">Student &nbsp; Faculty &nbsp; Administrator</p>
+    </div>
+  </div>
+
+</div>
+</body></html>

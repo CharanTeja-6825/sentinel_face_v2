@@ -35,11 +35,19 @@ export default function FaceOverlay({
     ctx.clearRect(0, 0, width, height);
     if (!landmarks) return;
 
+    // Read the palette rather than keeping a second, hand-synced copy of it. These
+    // used to be literal rgba() values with the hex in a comment beside them.
+    const token = (name: string, alpha: number) => {
+      const hsl = getComputedStyle(document.documentElement)
+        .getPropertyValue(name)
+        .trim();
+      return hsl ? `hsl(${hsl} / ${alpha})` : `rgba(255,255,255,${alpha})`;
+    };
     const stroke = {
       idle: "rgba(255,255,255,0.55)",
-      onTarget: "rgba(37,99,235,0.95)",   // accent  #2563EB
-      accepted: "rgba(22,163,74,0.95)",   // success #16A34A
-      rejected: "rgba(217,119,6,0.95)",   // warning #D97706
+      onTarget: token("--accent", 0.95),      // instruct — turn this way
+      accepted: token("--warning", 0.95),     // measure  — banked at this quality
+      rejected: token("--destructive", 0.95), // refuse   — not usable
     }[tone];
 
     const ring = (pts: [number, number][], lineWidth: number) => {

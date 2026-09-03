@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=tabular@400,500,600,700&f%5B%5D=technor@300,400,500,700&display=swap">
+<style>
+  /* What the system keeps of a person is not a face. It is a column of numbers, and
+     the numbers are the only thing that can be read back. So the figures are set as
+     the primary text and the words are demoted to the margins that annotate them. */
+  :root { --figure:#E8EEF2; --label:#7E8A96; --compare:#4CC2A0; --identity:#F2B441; }
+  html { background:#0B0D10; }
+  body { margin:0; background:#0B0D10; color:var(--figure);
+         font-family:'Tabular',ui-monospace,monospace;
+         font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; }
+  .ledger { max-width:80rem; margin:0 auto; padding:4rem 3rem 8rem; }
+
+  /* the figures are the headline */
+  .fig-xl { font-weight:700; font-size:clamp(4rem,15vw,12rem); line-height:0.82;
+            letter-spacing:-0.05em; margin:0; }
+  .fig-l  { font-weight:600; font-size:clamp(2rem,6vw,4.5rem); line-height:0.95;
+            letter-spacing:-0.035em; margin:0; }
+  .fig-m  { font-weight:500; font-size:clamp(1.25rem,3vw,2.25rem); line-height:1.15;
+            letter-spacing:-0.02em; margin:0; }
+  .compare  { color:var(--compare); }
+  .identity { color:var(--identity); }
+
+  /* the words annotate, in a different voice, at a fraction of the size */
+  .note { font-family:'Technor',system-ui,sans-serif; color:var(--label);
+          font-weight:400; font-size:0.8125rem; line-height:1.7; letter-spacing:0.02em;
+          margin:0.5rem 0 0; max-width:44ch; }
+  .note-strong { font-family:'Technor',system-ui,sans-serif; color:var(--figure);
+                 font-weight:700; font-size:1.0625rem; line-height:1.4;
+                 letter-spacing:-0.005em; margin:0.6rem 0 0; max-width:36ch; }
+  .name { font-family:'Technor',system-ui,sans-serif; color:var(--identity);
+          font-weight:500; font-size:1rem; letter-spacing:0.24em; text-transform:uppercase;
+          margin:0 0 2.5rem; }
+  .roles { font-family:'Technor',system-ui,sans-serif; color:var(--label);
+           font-weight:400; font-size:0.75rem; letter-spacing:0.3em;
+           text-transform:uppercase; margin:0; }
+  .rule-line { color:var(--compare); font-family:'Technor',system-ui,sans-serif;
+               font-weight:500; font-size:1rem; line-height:1.7; letter-spacing:0.01em;
+               margin:0.6rem 0 0; max-width:40ch; }
+  .row { margin:0 0 4.25rem; }
+  .row-tight { margin:0 0 1.75rem; }
+</style></head><body>
+<div class="ledger">
+
+  <p class="name">SentinelFace</p>
+
+  <div class="row">
+    <p class="fig-xl">0.62</p>
+    <p class="fig-m compare">≥ 0.60</p>
+    <p class="note-strong">Attendance from the room, not from a roll call</p>
+    <p class="note">confident</p>
+  </div>
+
+  <div class="row">
+    <p class="fig-l">margin 0.14</p>
+    <p class="rule-line">An uncertain match is marked absent, never present.</p>
+    <p class="note">uncertain &nbsp; no match</p>
+  </div>
+
+  <div class="row-tight">
+    <p class="fig-l identity">22BCE1234</p>
+    <p class="note">Fifteen templates stored. The images are discarded.</p>
+  </div>
+
+  <div class="row">
+    <p class="fig-m">front &nbsp; left &nbsp; right &nbsp; up &nbsp; down</p>
+    <p class="note">Move a little closer</p>
+    <p class="note">Hold still — try better lighting</p>
+    <p class="note">You are facing front — turn your head to your left</p>
+    <p class="note">Captured front · quality 0.83</p>
+  </div>
+
+  <div class="row">
+    <p class="fig-l">0.83</p>
+    <p class="note-strong">Sixty candidates, not twenty thousand.</p>
+    <p class="rule-line">No single frame is enough. The mean of thirty is.</p>
+  </div>
+
+  <p class="roles">Student &nbsp; Faculty &nbsp; Administrator</p>
+
+</div>
+</body></html>

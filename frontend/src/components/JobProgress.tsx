@@ -19,8 +19,8 @@ export default function JobProgress({ status }: { status: SessionStatus }) {
 
   if (status.status === "failed") {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>
+      <Alert variant="refuse">
+        <AlertDescription data-slot="body">
           Processing failed: {status.error_message ?? "no message recorded"}
         </AlertDescription>
       </Alert>
@@ -29,14 +29,12 @@ export default function JobProgress({ status }: { status: SessionStatus }) {
 
   const pct = Math.round((status.progress ?? 0) * 100);
   return (
-    <div className="space-y-2.5 rounded-lg border bg-card p-4 shadow-card">
+    <div className="space-y-2.5 rounded-sm border border-border p-4">
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium capitalize text-card-foreground">
-          {status.status}
-        </span>
-        <span className="tnum text-sm text-muted-foreground">{pct}%</span>
+        <span className="stamp font-medium text-muted-foreground">{status.status}</span>
+        <span className="tnum text-sm font-semibold text-measure">{pct}%</span>
       </div>
-      <Progress value={pct} className="h-2 [&>*]:bg-accent" />
+      <Progress value={pct} className="h-1.5" />
       <p className="tnum text-xs text-muted-foreground">
         {status.frames_sampled ?? 0}
         {status.expected_frames ? ` / ~${status.expected_frames}` : ""} frames ·{" "}

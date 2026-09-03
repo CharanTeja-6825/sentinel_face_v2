@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=bespoke-serif@400,500,700,800&f%5B%5D=switzer@300,400,500,700&display=swap">
+<style>
+  /* Certainty governs size, weight, colour AND how much air a statement is given.
+     What the system is sure of is set tight. What it doubts is given room. What it
+     cannot say is nearly silent. */
+  :root { --sure:#F4F6F8; --doubt:#C6A15B; --silent:#5A6472; }
+  html { background:#0E1116; }
+  body { margin:0; background:#0E1116; color:var(--sure);
+         font-family:'Switzer',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  main { max-width:78rem; margin:0 auto; padding:5rem 3.5rem 10rem; }
+
+  /* TIER ONE — confident. Tight leading, tight tracking, no surrounding air. */
+  .t1 { font-family:'Bespoke Serif',Georgia,serif; font-weight:800;
+        font-size:clamp(3rem,8.2vw,7.2rem); line-height:0.9; letter-spacing:-0.035em;
+        max-width:15ch; margin:0 0 0.35rem; }
+  .t1-sub { font-family:'Bespoke Serif',Georgia,serif; font-weight:400; font-style:italic;
+            font-size:clamp(1.25rem,2.6vw,2rem); line-height:1.1; letter-spacing:-0.015em;
+            margin:0 0 1.75rem; max-width:24ch; }
+  .t1-run { font-weight:700; font-size:1.0625rem; line-height:1.35; letter-spacing:-0.005em;
+            margin:0 0 0.35rem; max-width:40ch; }
+
+  /* TIER TWO — uncertain. Half the size, and roughly four times the air. */
+  .t2 { color:var(--doubt); font-weight:400; font-size:clamp(1.25rem,2.4vw,1.875rem);
+        line-height:1.7; letter-spacing:0.002em; max-width:33ch;
+        margin:5.5rem 0 5.5rem 14%; }
+  .t2 strong { font-weight:500; font-style:normal; }
+  .t2-list { color:var(--doubt); font-weight:300; font-size:1.0625rem; line-height:2.9;
+             letter-spacing:0.03em; margin:4.5rem 0 4.5rem 14%; max-width:46ch; }
+
+  /* TIER THREE — no match. Smallest, coolest, and the most isolated. */
+  .t3 { color:var(--silent); font-weight:400; font-size:0.8125rem; line-height:1.9;
+        letter-spacing:0.2em; text-transform:uppercase; margin:9rem 0 0 42%;
+        max-width:26ch; }
+  .t3-num { color:var(--silent); font-weight:400; font-size:0.8125rem;
+            letter-spacing:0.16em; font-variant-numeric:tabular-nums;
+            margin:2.25rem 0 0 42%; }
+  .t3-roles { color:var(--silent); font-weight:400; font-size:0.75rem;
+              letter-spacing:0.34em; text-transform:uppercase; margin:11rem 0 0 42%; }
+
+  .verdict-stack { margin:2.75rem 0 0.4rem; }
+  .v-sure   { font-family:'Bespoke Serif',Georgia,serif; font-weight:800;
+              font-size:clamp(2rem,4.6vw,3.6rem); line-height:1; letter-spacing:-0.03em;
+              margin:0; }
+  .v-doubt  { color:var(--doubt); font-family:'Bespoke Serif',Georgia,serif; font-weight:500;
+              font-style:italic; font-size:clamp(1.5rem,3.2vw,2.5rem); line-height:1.5;
+              letter-spacing:-0.015em; margin:0.75rem 0 0; }
+  .v-silent { color:var(--silent); font-weight:300; font-size:1rem; line-height:2.4;
+              letter-spacing:0.24em; text-transform:uppercase; margin:1.5rem 0 0; }
+</style></head><body>
+<main>
+
+  <p class="t1">SentinelFace</p>
+  <p class="t1-sub">Attendance from the room, not from a roll call</p>
+  <p class="t1-run">Sixty candidates, not twenty thousand.</p>
+  <p class="t1-run">No single frame is enough. The mean of thirty is.</p>
+
+  <div class="verdict-stack">
+    <p class="v-sure">confident</p>
+    <p class="v-doubt">uncertain</p>
+    <p class="v-silent">no match</p>
+  </div>
+
+  <p class="t2">An uncertain match is marked absent, <strong>never present.</strong></p>
+
+  <p class="t2-list">Move a little closer<br>
+    Hold still — try better lighting<br>
+    You are facing front — turn your head to your left<br>
+    Captured front · quality 0.83</p>
+
+  <p class="t2">Fifteen templates stored. The images are discarded.</p>
+
+  <p class="t3">front &nbsp;·&nbsp; left &nbsp;·&nbsp; right &nbsp;·&nbsp; up &nbsp;·&nbsp; down</p>
+  <p class="t3-num">22BCE1234 &nbsp;&nbsp; 0.62 ≥ 0.60 &nbsp;&nbsp; margin 0.14</p>
+  <p class="t3-roles">Student &nbsp; Faculty &nbsp; Administrator</p>
+
+</main>
+</body></html>

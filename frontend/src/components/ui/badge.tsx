@@ -3,18 +3,29 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Badges are stamps: uppercase, tracked, in the machine voice, on a hairline rather
+ * than a fill — C separates with outline and colour, never with a filled chip.
+ *
+ * The band variants encode the three verdicts. `confident` is settled and takes
+ * primary ink at the heaviest weight; `uncertain` is measured but unresolved and
+ * takes the measure colour; `no match` is a refusal to name and takes refuse.
+ */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "stamp inline-flex items-center rounded-sm border px-2 py-0.5 font-medium",
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
+        default: "border-border text-muted-foreground",
+        confident: "border-foreground/25 font-semibold text-foreground",
+        uncertain: "border-measure/40 text-measure",
+        no_match: "border-refuse/40 text-refuse",
+        instruct: "border-instruct/40 text-instruct",
+        refuse: "border-refuse/40 text-refuse",
+        measure: "border-measure/40 text-measure",
+        secondary: "border-border text-muted-foreground",
+        destructive: "border-refuse/40 text-refuse",
+        outline: "border-border text-foreground",
       },
     },
     defaultVariants: {
@@ -28,9 +39,7 @@ export interface BadgeProps
     VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
 }
 
 export { Badge, badgeVariants }

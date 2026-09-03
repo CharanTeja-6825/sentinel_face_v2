@@ -163,3 +163,27 @@ export type SessionHistory = {
   auto_resolution_rate: number | null;
   auto_present: number;
 };
+
+// ── live test (single-frame identify) ──────────────────────────────────
+export type IdentifiedFace = {
+  /** x1, y1, x2, y2 in UNMIRRORED frame pixels — the frame that was POSTed. */
+  bbox: [number, number, number, number];
+  accepted: boolean;
+  /** Raw quality-gate code; FRIENDLY in LiveTestPage maps it (§11). */
+  reason: string | null;
+  quality_score: number;
+  band: "confident" | "uncertain" | "no_match" | null;
+  roll_no: string | null;
+  name: string | null;
+  score: number | null;
+  margin: number | null;
+  runner_up_roll: string | null;
+};
+
+export type Identification = {
+  section: string;
+  faces: IdentifiedFace[];
+  roster_size: number;
+  gallery_size: number;
+  thresholds: { t_high: number; t_low: number; margin_min: number };
+};

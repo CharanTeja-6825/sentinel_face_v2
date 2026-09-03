@@ -1,13 +1,16 @@
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { ScanFace } from "lucide-react";
+import { NavLink, Route, Routes } from "react-router-dom";
+import OverviewPage from "./pages/OverviewPage";
 import RegisterPage from "./pages/RegisterPage";
+import LiveTestPage from "./pages/LiveTestPage";
 import SessionsPage from "./pages/SessionsPage";
 import SessionDetailPage from "./pages/SessionDetailPage";
 import AdminPage from "./pages/AdminPage";
 import { cn } from "./lib/utils";
 
 const tabs = [
+  { to: "/", label: "Overview", end: true },
   { to: "/register", label: "Register" },
+  { to: "/live", label: "Live test" },
   { to: "/sessions", label: "Sessions" },
   { to: "/admin", label: "Admin" },
 ];
@@ -15,22 +18,27 @@ const tabs = [
 export default function App() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-card/85 backdrop-blur-md">
-        <nav className="mx-auto flex max-w-6xl items-center gap-1 px-6 py-3.5">
-          <span className="mr-6 flex items-center gap-2 font-semibold tracking-tight text-card-foreground">
-            <ScanFace className="h-5 w-5 text-accent" />
+      {/* The nav is a stamp row with a bottom mark — the same treatment Tabs now
+          uses, so "tab" means one thing in this product instead of two. */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-sm">
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-7 gap-y-1 px-6">
+          <NavLink
+            to="/"
+            className="mr-3 py-3.5 font-display text-lg font-semibold tracking-tight text-foreground"
+          >
             SentinelFace
-          </span>
+          </NavLink>
           {tabs.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}
+              end={t.end}
               className={({ isActive }) =>
                 cn(
-                  "rounded-md px-3 py-1.5 text-sm transition-colors",
+                  "stamp -mb-px border-b-2 py-3.5 font-medium transition-colors",
                   isActive
-                    ? "bg-accent-light font-medium text-accent"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "border-b-instruct text-instruct"
+                    : "border-b-transparent text-muted-foreground hover:text-foreground",
                 )
               }
             >
@@ -40,10 +48,11 @@ export default function App() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <main className="mx-auto max-w-6xl px-6 pb-24 pt-10">
         <Routes>
-          <Route path="/" element={<Navigate to="/register" replace />} />
+          <Route path="/" element={<OverviewPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/live" element={<LiveTestPage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/sessions/:id" element={<SessionDetailPage />} />
           <Route path="/admin" element={<AdminPage />} />

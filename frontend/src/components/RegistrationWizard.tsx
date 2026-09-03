@@ -7,6 +7,7 @@ import AngleGuide, { anglePrompt } from "./AngleGuide";
 import FaceOverlay from "./FaceOverlay";
 import PoseDial from "./PoseDial";
 import { cn } from "@/lib/utils";
+import { useCamera, grabFrame } from "@/hooks/useCamera";
 import { api, errorMessage, type EnrolSession, type FrameResult } from "@/lib/api";
 
 /** §11 — show friendly text, never the raw reason code. */
@@ -52,7 +53,7 @@ export default function RegistrationWizard({
   session: EnrolSession;
   onDone: (templates: number) => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const { videoRef, ready, error: cameraError } = useCamera();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inFlight = useRef(false);
 
@@ -61,7 +62,6 @@ export default function RegistrationWizard({
   const resumeAt = useRef(0);
   const target = useRef<string | null>(session.target_angle);
 
-  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [last, setLast] = useState<FrameResult | null>(null);
   const [pauseNote, setPauseNote] = useState<string | null>(null);
@@ -76,21 +76,6 @@ export default function RegistrationWizard({
   // and the angle actually being accepted drift apart.
   const current = last ? last.target_angle : session.target_angle;
 
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    navigator.mediaDevices
-      .getUserMedia({ video: { width: 1280, height: 720 } })
-      .then((s) => {
-        stream = s;
-        if (videoRef.current) {
-          videoRef.current.srcObject = s;
-          setReady(true);
-        }
-      })
-      .catch(() => setError("Cannot access the webcam. Grant camera permission and reload."));
-    return () => stream?.getTracks().forEach((t) => t.stop());
-  }, []);
-
   const hold = useCallback((ms: number, note: string) => {
     resumeAt.current = Date.now() + ms;
     setPauseNote(note);
@@ -98,23 +83,16 @@ export default function RegistrationWizard({
   }, []);
 
   const capture = useCallback(async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2 || inFlight.current) return;
-    if (Date.now() < resumeAt.current) return;
-
-    // DECISIONS.md D5: the preview is CSS-mirrored so the student can position
-    // themselves naturally, but the canvas draws the RAW video frame. Mirroring
-    // here would flip the yaw sign and label every "left" capture as "right".
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")!.drawImage(video, 0, 0);
+    if (inFlight.current || Date.now() < resumeAt.current) return;
+    // grabFrame draws the RAW, unmirrored video frame — see D5 in the hook.
+    const image = grabFrame(videoRef.current, canvasRef.current);
+    if (!image) return;
 
     inFlight.current = true;
     try {
       const { data } = await api.post<FrameResult>(
         `/enrolment/sessions/${session.session_id}/frames`,
-        { image: canvas.toDataURL("image/jpeg", 0.92) },
+        { image },
       );
       setLast(data);
       setError(null);
@@ -136,7 +114,7 @@ export default function RegistrationWizard({
     } finally {
       inFlight.current = false;
     }
-  }, [session.session_id, hold]);
+  }, [session.session_id, hold, videoRef]);
 
   useEffect(() => {
     if (!ready) return;
@@ -193,13 +171,14 @@ export default function RegistrationWizard({
       <div className="space-y-4">
         <div
           className={cn(
-            "relative overflow-hidden rounded-lg border-2 bg-primary shadow-card transition-colors duration-300",
+            "relative overflow-hidden rounded-lg border-2 bg-primary transition-colors duration-300",
+            // captured = a measured value banked; onTarget = do this; rejected = refused
             tone === "accepted"
-              ? "border-success"
+              ? "border-measure"
               : tone === "onTarget"
-                ? "border-accent"
+                ? "border-instruct"
                 : tone === "rejected"
-                  ? "border-warning"
+                  ? "border-refuse"
                   : "border-border",
           )}
         >
@@ -221,15 +200,15 @@ export default function RegistrationWizard({
               className={cn(
                 "h-[72%] aspect-[3/4] rounded-[50%] border-2 transition-colors duration-300",
                 tone === "accepted"
-                  ? "border-success/70"
+                  ? "border-measure/80"
                   : tone === "onTarget"
-                    ? "border-accent/70"
+                    ? "border-instruct/80"
                     : "border-white/40",
               )}
             />
           </div>
 
-          {!ready && !error && (
+          {!ready && !cameraError && (
             <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-white/80">
               <ScanFace className="h-4 w-4 animate-pulse" />
               Starting the camera…
@@ -237,7 +216,7 @@ export default function RegistrationWizard({
           )}
 
           {pauseNote && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-primary/85 px-4 py-3 text-center text-sm font-medium text-primary-foreground backdrop-blur-sm">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-foreground/90 px-4 py-3 text-center text-sm font-medium text-background backdrop-blur-sm">
               {pauseNote}
             </div>
           )}
@@ -246,16 +225,16 @@ export default function RegistrationWizard({
 
         {/* Status line under the camera, so the student's eyes stay near the lens. */}
         <div className="min-h-[3.25rem]">
-          {error ? (
+          {cameraError || error ? (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription data-slot="body">{cameraError ?? error}</AlertDescription>
             </Alert>
           ) : rejection ? (
-            <Alert className="border-warning/30 bg-warning/5">
-              <AlertDescription className="text-foreground">{rejection}</AlertDescription>
+            <Alert variant={onTarget ? "refuse" : "instruct"}>
+              <AlertDescription data-slot="body">{rejection}</AlertDescription>
             </Alert>
           ) : last?.accepted ? (
-            <p className="tnum flex items-center gap-2 rounded-md bg-success/10 px-3 py-2.5 text-sm font-medium text-success">
+            <p className="tnum flex items-center gap-2 border-l-2 border-l-measure py-2.5 pl-3.5 text-sm font-medium text-measure">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               Captured {last.detected_angle} · quality {last.quality_score.toFixed(2)}
             </p>
@@ -272,11 +251,9 @@ export default function RegistrationWizard({
           current={current}
         />
 
-        <div className="space-y-3 rounded-lg border bg-card p-4 shadow-card">
+        <div className="space-y-3 rounded-sm border border-border p-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Head position
-            </span>
+            <span className="stamp font-medium text-muted-foreground">Head position</span>
             <span className="tnum text-xs text-muted-foreground">
               {captured}/{session.min_samples} samples
             </span>
@@ -284,13 +261,14 @@ export default function RegistrationWizard({
           <PoseDial pose={last?.pose ?? null} target={current} inZone={onTarget} />
           <Progress
             value={Math.min(100, (captured / session.min_samples) * 100)}
-            className="h-1.5 [&>*]:bg-accent"
+            className="h-1.5"
           />
         </div>
 
         <div className="space-y-2">
           <Button
-            className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+            variant="instruct"
+              className="w-full"
             size="lg"
             disabled={!canComplete || completing}
             onClick={complete}

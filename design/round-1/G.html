@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>G</title>
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f%5B%5D=tanker@400&f%5B%5D=general-sans@300,400,500,600&display=swap">
+<style>
+  /* The two errors are not equal. A wrong absent costs three seconds; a wrong present
+     is invisible and is the fraud the system exists to stop. The page refuses to
+     balance: one side carries almost all the mass, the other almost none, and the
+     imbalance is the argument. */
+  :root { --mass:#F0EDE6; --cost:#D9452E; }
+  html { background:#101010; }
+  body { margin:0; background:#101010; color:var(--mass);
+         font-family:'General Sans',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .weigh { display:grid; grid-template-columns:minmax(0,72fr) minmax(0,28fr);
+           column-gap:3rem; max-width:86rem; margin:0 auto;
+           padding:3.5rem 3rem 9rem; align-items:start; }
+  @media (max-width:860px){ .weigh { grid-template-columns:1fr; row-gap:4rem; } }
+
+  /* the heavy side */
+  .huge { font-family:'Tanker',sans-serif; font-weight:400;
+          font-size:clamp(4rem,15.5vw,13.5rem); line-height:0.8; letter-spacing:-0.02em;
+          margin:0 0 1.5rem; }
+  .heavy { font-family:'Tanker',sans-serif; font-weight:400;
+           font-size:clamp(2rem,6.6vw,5.25rem); line-height:0.9; letter-spacing:-0.012em;
+           margin:0 0 1.1rem; max-width:14ch; }
+  .heavy-cost { color:var(--cost); }
+  .under { font-weight:400; font-size:1.0625rem; line-height:1.5; letter-spacing:0.002em;
+           margin:0 0 0.5rem; max-width:42ch; }
+  .under-cost { color:var(--cost); font-weight:500; }
+
+  /* the light side: small, sparse, set against the top edge */
+  .light { font-weight:300; font-size:0.8125rem; line-height:2.2; letter-spacing:0.12em;
+           margin:0 0 3rem; }
+  .light-strong { font-weight:600; letter-spacing:0.02em; text-transform:none;
+                  font-size:0.9375rem; line-height:1.8; }
+  .light-figures { font-weight:500; font-size:0.8125rem; letter-spacing:0.1em;
+                   font-variant-numeric:tabular-nums; margin:0 0 3rem; }
+  .light-roles { color:var(--cost); font-weight:600; font-size:0.6875rem;
+                 letter-spacing:0.34em; text-transform:uppercase; margin:0; }
+</style></head><body>
+<div class="weigh">
+
+  <div>
+    <p class="huge">SentinelFace</p>
+    <p class="under">Attendance from the room, not from a roll call</p>
+    <p class="heavy">Sixty candidates, not twenty thousand.</p>
+    <p class="heavy heavy-cost">An uncertain match is marked absent, never present.</p>
+    <p class="under">No single frame is enough. The mean of thirty is.</p>
+    <p class="under under-cost">Fifteen templates stored. The images are discarded.</p>
+  </div>
+
+  <div>
+    <p class="light">confident<br>uncertain<br>no match</p>
+    <p class="light-strong">Move a little closer<br>
+      Hold still — try better lighting<br>
+      You are facing front — turn your head to your left<br>
+      Captured front · quality 0.83</p>
+    <p class="light">front &nbsp; left &nbsp; right &nbsp; up &nbsp; down</p>
+    <p class="light-figures">22BCE1234<br>0.62 ≥ 0.60<br>margin 0.14</p>
+    <p class="light-roles">Student<br>Faculty<br>Administrator</p>
+  </div>
+
+</div>
+</body></html>
